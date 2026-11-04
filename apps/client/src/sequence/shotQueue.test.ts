@@ -107,6 +107,21 @@ describe("ShotQueue", () => {
     expect(calls).toBeGreaterThan(0);
   });
 
+  it("adopts an existing history instantly (reconnect) and only animates new shots", () => {
+    const seen: [number, ShotPhase][] = [];
+    const queue = new ShotQueue({
+      motion: () => MOTION,
+      onPhase: (entry, phase) => seen.push([entry.id, phase]),
+    });
+    queue.adopt([own(0, "sunk"), enemy(1)]);
+    expect(queue.getSnapshot()).toMatchObject({ busy: false, impacted: 2, active: null });
+    expect(queue.getSnapshot().sunkRevealed.has(0)).toBe(true);
+    expect(seen).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    queue.sync([own(0, "sunk"), enemy(1), own(2, "miss")]);
+    expect(queue.getSnapshot().active?.entry.id).toBe(2);
+  });
+
   it("can skip straight to the end and stops its timers on dispose", () => {
     const queue = new ShotQueue({ motion: () => MOTION });
     queue.sync([own(0, "sunk"), enemy(1)]);

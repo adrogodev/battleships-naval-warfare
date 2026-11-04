@@ -17,9 +17,10 @@ import {
   type Rng,
   reduce,
   type Seat,
-  type ShipId,
+  type ShotRecord,
   viewFor,
 } from "@battleships/shared";
+import { type BattleStats, computeBattleStats } from "./battleStats";
 
 export type Scheduler = (fn: () => void, ms: number) => () => void;
 
@@ -28,22 +29,9 @@ const defaultScheduler: Scheduler = (fn, ms) => {
   return () => clearTimeout(id);
 };
 
-export interface LogEntry {
-  readonly id: number;
-  readonly seat: Seat;
-  readonly coord: Coord;
-  readonly result: "miss" | "hit" | "sunk";
-  readonly shipId?: ShipId;
-}
-
-export interface BattleStats {
-  readonly shots: number;
-  readonly hits: number;
-  readonly accuracy: number;
-  readonly maxStreak: number;
-  readonly firstSinkTurn: number | null;
-  readonly durationMs: number;
-}
+/** One resolved shot, as both players see it. Seat 0 is always the local player in snapshots. */
+export type LogEntry = ShotRecord;
+export type { BattleStats };
 
 export interface GameSnapshot {
   readonly view: PlayerView;
@@ -215,29 +203,11 @@ export class LocalAiGame {
   }
 
   private computeStats(): BattleStats {
-    const own = this.log.filter((entry) => entry.seat === HUMAN);
-    let streak = 0;
-    let maxStreak = 0;
-    let hits = 0;
-    let firstSinkTurn: number | null = null;
-    for (const [index, entry] of own.entries()) {
-      if (entry.result === "miss") {
-        streak = 0;
-        continue;
-      }
-      hits++;
-      streak++;
-      maxStreak = Math.max(maxStreak, streak);
-      if (entry.result === "sunk" && firstSinkTurn === null) firstSinkTurn = index + 1;
-    }
-    const end = this.battleEndedAt ?? this.now();
-    return {
-      shots: own.length,
-      hits,
-      accuracy: own.length === 0 ? 0 : hits / own.length,
-      maxStreak,
-      firstSinkTurn,
-      durationMs: this.battleStartedAt === null ? 0 : end - this.battleStartedAt,
-    };
+    return computeBattleStats(this.log, {
+      ownSeat: HUMAN,
+      startedAt: this.battleStartedAt,
+      endedAt: this.battleEndedAt,
+      now: this.now(),
+    });
   }
 }

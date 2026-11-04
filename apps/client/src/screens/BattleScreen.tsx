@@ -7,7 +7,7 @@ import {
   sameCoord,
   shipCells,
 } from "@battleships/shared";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSnapshot, LogEntry } from "../adapters/localAiGame";
 import type { HapticCue } from "../app/haptics";
 import type { MusicIntensity, SfxId } from "../audio";
@@ -25,6 +25,10 @@ import { commsLine } from "../narrative/narrative";
 import { type ShotPhase, ShotQueue } from "../sequence/shotQueue";
 import type { MotionTokens } from "../theme/motion";
 
+export type BattleOpponent =
+  | { readonly kind: "ai"; readonly difficulty: Difficulty }
+  | { readonly kind: "human"; readonly alias: string };
+
 export interface BattleEffects {
   readonly play: (id: SfxId) => void;
   readonly setIntensity: (level: MusicIntensity) => void;
@@ -34,8 +38,12 @@ export interface BattleEffects {
 interface BattleScreenProps {
   readonly snapshot: GameSnapshot;
   readonly operation: string;
-  /** Rival commander, shown in the header and as the voice of the transmissions. */
-  readonly difficulty: Difficulty;
+  /** Rival: an AI commander (header insignia and transmissions) or a human player. */
+  readonly opponent: BattleOpponent;
+  /** Multiplayer layer (turn banner, timer, disconnection, reactions), rendered over the battle. */
+  readonly live?: ReactNode;
+  /** Firing is disabled while the match is frozen (e.g. a player lost the connection). */
+  readonly frozen?: boolean;
   /** Show the commander's brief comments on key moments. */
   readonly commanderComments: boolean;
   readonly motion: MotionTokens;
@@ -85,13 +93,15 @@ export function BattleScreen(props: BattleScreenProps) {
   const [transmission, setTransmission] = useState<{ id: number; text: string } | null>(null);
 
   const onPhaseRef = useRef<(entry: LogEntry, phase: ShotPhase) => void>(() => {});
-  const [queue] = useState(
-    () =>
-      new ShotQueue({
-        motion: () => latest.current.motion,
-        onPhase: (entry, phase) => onPhaseRef.current(entry, phase),
-      }),
-  );
+  const [queue] = useState(() => {
+    const created = new ShotQueue({
+      motion: () => latest.current.motion,
+      onPhase: (entry, phase) => onPhaseRef.current(entry, phase),
+    });
+    // Mounting into a battle already in progress (reload, reconnect): show its history at once.
+    created.adopt(props.snapshot.log);
+    return created;
+  });
   const presented = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
 
   const sound = (id: SfxId) => {
@@ -101,9 +111,9 @@ export function BattleScreen(props: BattleScreenProps) {
   };
 
   const comment = (moment: CommanderMoment, variant: number) => {
-    const { commanderComments, difficulty } = latest.current;
-    if (!commanderComments) return;
-    const text = commanderComment(difficulty, moment, variant);
+    const { commanderComments, opponent } = latest.current;
+    if (!commanderComments || opponent.kind !== "ai") return;
+    const text = commanderComment(opponent.difficulty, moment, variant);
     setTransmission((previous) => ({ id: (previous?.id ?? 0) + 1, text }));
   };
 
@@ -166,9 +176,12 @@ export function BattleScreen(props: BattleScreenProps) {
 
   // Opening transmission, once per battle.
   useEffect(() => {
-    const { commanderComments, difficulty, operation } = latest.current;
-    if (!commanderComments) return;
-    setTransmission({ id: 1, text: commanderComment(difficulty, "battleStart", operation.length) });
+    const { commanderComments, opponent, operation } = latest.current;
+    if (!commanderComments || opponent.kind !== "ai") return;
+    setTransmission({
+      id: 1,
+      text: commanderComment(opponent.difficulty, "battleStart", operation.length),
+    });
   }, []);
 
   useEffect(() => {
@@ -208,7 +221,11 @@ export function BattleScreen(props: BattleScreenProps) {
   const streak = currentStreak(log, presented.impacted);
   const finished = view.phase === "finished" && !presented.busy;
   const myTurn =
-    view.phase === "battle" && view.turn === view.you && !aiThinking && !presented.busy;
+    view.phase === "battle" &&
+    view.turn === view.you &&
+    !aiThinking &&
+    !presented.busy &&
+    !props.frozen;
 
   useEffect(() => {
     effects.setIntensity(musicIntensity({ ownAfloat, enemyAfloat, streak }));
@@ -306,7 +323,9 @@ export function BattleScreen(props: BattleScreenProps) {
   let alert: string | null = null;
   if (enemyAfloat === 1) alert = t.battle.lastShipEnemy;
   else if (ownAfloat === 1) alert = t.battle.lastShipOwn;
-  const commander = t.commanders[props.difficulty];
+  const { opponent } = props;
+  const commander = opponent.kind === "ai" ? t.commanders[opponent.difficulty] : null;
+  const rivalName = commander ? commander.name : opponent.kind === "human" ? opponent.alias : "";
   const showRadar = !props.compact || tab === "radar";
   const showDeck = !props.compact || tab === "deck";
 
@@ -316,8 +335,10 @@ export function BattleScreen(props: BattleScreenProps) {
         <div>
           <p className="label">{props.operation}</p>
           <p className="battle__opponent">
-            <Insignia rank={props.difficulty} className="battle__insignia" />
-            {t.battle.versus(commander.name)}
+            {opponent.kind === "ai" && (
+              <Insignia rank={opponent.difficulty} className="battle__insignia" />
+            )}
+            {t.battle.versus(rivalName)}
           </p>
         </div>
         <div className={`turn${myTurn ? "" : " turn--enemy"}`} role="status">
@@ -454,6 +475,7 @@ export function BattleScreen(props: BattleScreenProps) {
         </div>
       </div>
 
+      {props.live}
       {alert && !finale && (
         <p className="alert" role="note">
           {alert}
@@ -471,13 +493,13 @@ export function BattleScreen(props: BattleScreenProps) {
         </div>
       )}
       <div className="transmission-live" aria-live="polite">
-        {transmission && (
+        {transmission && opponent.kind === "ai" && commander && (
           <aside
             key={transmission.id}
             className="transmission panel"
             aria-label={t.commander.transmission}
           >
-            <Insignia rank={props.difficulty} className="transmission__insignia" />
+            <Insignia rank={opponent.difficulty} className="transmission__insignia" />
             <p className="transmission__body">
               <span className="label">
                 {t.commander.transmission} · {commander.name}

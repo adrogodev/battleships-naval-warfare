@@ -5,14 +5,19 @@ import {
   type ShipSpec,
   shipCells,
 } from "@battleships/shared";
+import type { ReactNode } from "react";
 import type { GameSnapshot } from "../adapters/localAiGame";
 import { Board, type BoardShip, type CellView } from "../components/Board";
 import { t } from "../i18n/es";
 
 interface ResultsScreenProps {
   readonly snapshot: GameSnapshot;
-  readonly onPlayAgain: () => void;
+  /** "Jugar otra vez" (local games); omitted in multiplayer, where `extra` holds the rematch. */
+  readonly onPlayAgain?: () => void;
   readonly onMenu: () => void;
+  /** Overrides the result sentence (e.g. the rival abandoned). */
+  readonly summary?: string;
+  readonly extra?: ReactNode;
 }
 
 function formatDuration(ms: number): string {
@@ -47,7 +52,13 @@ function revealedBoard(
   return { ships, cellAt };
 }
 
-export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenProps) {
+export function ResultsScreen({
+  snapshot,
+  onPlayAgain,
+  onMenu,
+  summary,
+  extra,
+}: ResultsScreenProps) {
   const { view, stats, revealedEnemyFleet } = snapshot;
   const won = view.winner === view.you;
   const forfeited = !won && view.ownSunk.length < view.rules.fleet.length;
@@ -73,7 +84,7 @@ export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenPr
       <h1 className={`results__title${won ? " is-victory" : ""}`}>
         {won ? t.results.victory : t.results.defeat}
       </h1>
-      <p>{text}</p>
+      <p>{summary ?? text}</p>
       <dl className="results__stats panel">
         <div>
           <dt className="label">{t.results.shots}</dt>
@@ -117,9 +128,12 @@ export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenPr
       </div>
 
       <div className="results__actions">
-        <button type="button" className="primary" onClick={onPlayAgain}>
-          {t.results.playAgain}
-        </button>
+        {extra}
+        {onPlayAgain && (
+          <button type="button" className="primary" onClick={onPlayAgain}>
+            {t.results.playAgain}
+          </button>
+        )}
         <button type="button" onClick={onMenu}>
           {t.results.menu}
         </button>

@@ -8,10 +8,13 @@ import {
   useSyncExternalStore,
 } from "react";
 import { LocalAiGame } from "../adapters/localAiGame";
+import { SESSION_KEY, type SocketGame } from "../adapters/socketGame";
 import { AudioEngine, type SfxId } from "../audio";
 import { Insignia } from "../components/Insignia";
 import { FxLayer, OceanBackground } from "../fx";
 import { t } from "../i18n/es";
+import { MultiplayerFlow } from "../multiplayer/MultiplayerFlow";
+import { codeFromLocation } from "../multiplayer/roomCode";
 import { operationName } from "../narrative/narrative";
 import { type BattleEffects, BattleScreen } from "../screens/BattleScreen";
 import { DeployScreen } from "../screens/DeployScreen";
@@ -28,14 +31,39 @@ export interface AppProps {
   readonly thinkDelayMs?: { min: number; max: number };
   readonly seed?: () => number;
   readonly audio?: AudioEngine;
+  /** Multiplayer adapter factory (a fake socket in tests). */
+  readonly createMultiplayerGame?: () => SocketGame;
 }
 
-type Screen = "boot" | "menu" | "settings" | "difficulty" | "deploy" | "battle" | "results";
+type Screen =
+  | "boot"
+  | "menu"
+  | "settings"
+  | "difficulty"
+  | "deploy"
+  | "battle"
+  | "results"
+  | "multiplayer";
+
+/** A session token in this tab means a reload in the middle of an online game: rejoin it. */
+function hasOnlineSession(): boolean {
+  try {
+    return window.sessionStorage.getItem(SESSION_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
 
 const defaultAudio = new AudioEngine();
 
-export function App({ thinkDelayMs, seed = Date.now, audio = defaultAudio }: AppProps) {
+export function App({
+  thinkDelayMs,
+  seed = Date.now,
+  audio = defaultAudio,
+  createMultiplayerGame,
+}: AppProps) {
   const [screen, setScreen] = useState<Screen>("boot");
+  const [joinCode, setJoinCode] = useState(() => codeFromLocation(window.location.search));
   const [game, setGame] = useState<LocalAiGame | null>(null);
   const [operation, setOperation] = useState("");
   const settings = useSettings();
@@ -71,7 +99,7 @@ export function App({ thinkDelayMs, seed = Date.now, audio = defaultAudio }: App
 
   // Never wait for audio: a browser may keep resume() pending (no trusted gesture, hidden tab).
   const boot = () => {
-    setScreen("menu");
+    setScreen(joinCode !== null || hasOnlineSession() ? "multiplayer" : "menu");
     void audio.unlock().then(() => audio.startMusic());
   };
 
@@ -136,6 +164,24 @@ export function App({ thinkDelayMs, seed = Date.now, audio = defaultAudio }: App
         }}
       />
     );
+  } else if (screen === "multiplayer") {
+    content = (
+      <MultiplayerFlow
+        initialCode={joinCode}
+        {...(createMultiplayerGame ? { createGame: createMultiplayerGame } : {})}
+        motion={motion}
+        reducedMotion={reducedMotion}
+        confirmShot={confirmShot}
+        compact={compact}
+        showBlocked={settings.showBlocked}
+        effects={effects}
+        play={play}
+        onMenu={() => {
+          setJoinCode(null);
+          toMenu();
+        }}
+      />
+    );
   } else if (screen === "menu" || game === null) {
     const remembered = t.commanders[settings.lastDifficulty];
     content = (
@@ -152,6 +198,15 @@ export function App({ thinkDelayMs, seed = Date.now, audio = defaultAudio }: App
             }}
           >
             {t.menu.playAi}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              play("click");
+              setScreen("multiplayer");
+            }}
+          >
+            {t.menu.multiplayer}
           </button>
           <button
             type="button"
@@ -223,6 +278,7 @@ function LiveBattle({
   screen,
   onPlayAgain,
   onMenu,
+  difficulty,
   ...battle
 }: {
   readonly game: LocalAiGame;
@@ -247,6 +303,7 @@ function LiveBattle({
   return (
     <BattleScreen
       {...battle}
+      opponent={{ kind: "ai", difficulty }}
       snapshot={snapshot}
       onFire={(coord) => game.fire(coord)}
       onLeave={() => game.leave()}

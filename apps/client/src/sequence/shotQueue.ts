@@ -85,6 +85,18 @@ export class ShotQueue {
     if (!this.snapshot.active) this.playNext();
   }
 
+  /**
+   * Marks an existing history as already presented, without animation or side effects
+   * (e.g. rejoining a battle after a reload). Later entries still play through sync().
+   */
+  adopt(log: readonly LogEntry[]): void {
+    if (log.length <= this.queued) return;
+    const sunk = new Set(this.snapshot.sunkRevealed);
+    for (const entry of log.slice(this.queued)) if (entry.result === "sunk") sunk.add(entry.id);
+    this.queued = log.length;
+    this.set({ impacted: log.length, sunkRevealed: sunk, active: null, busy: false });
+  }
+
   /** Reveals everything immediately (e.g. leaving the battle). */
   skipAll(): void {
     this.clearTimers();

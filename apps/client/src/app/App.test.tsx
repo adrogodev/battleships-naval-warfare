@@ -1,8 +1,10 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LocalAiGameOptions } from "../adapters/localAiGame";
+import { SocketGame } from "../adapters/socketGame";
 import { AudioEngine } from "../audio";
 import { FakeAudioContext } from "../audio/fakeAudioContext";
+import { FakeSocket, fakeView, roomState, twoPlayers } from "../multiplayer/testing/fakeSocket";
 import { commanderLines } from "../narrative/commander";
 import { settingsStore } from "../settings/settingsStore";
 import { App, type AppProps } from "./App";
@@ -201,6 +203,105 @@ describe("App", () => {
     expect(settingsStore.get().aiDelay).toBe("fast");
     fireEvent.click(screen.getByRole("checkbox", { name: /Comentarios del comandante/ }));
     expect(settingsStore.get().commanderComments).toBe(false);
+  });
+});
+
+describe("App · multiplayer", () => {
+  function fakeMultiplayer() {
+    const sockets: FakeSocket[] = [];
+    const createMultiplayerGame = () =>
+      new SocketGame({
+        url: "http://server.test",
+        socketFactory: () => {
+          const socket = new FakeSocket();
+          sockets.push(socket);
+          return socket;
+        },
+        storage: sessionStorage,
+      });
+    const socket = () => {
+      const last = sockets.at(-1);
+      if (!last) throw new Error("no socket");
+      return last;
+    };
+    return { createMultiplayerGame, socket };
+  }
+
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+    sessionStorage.clear();
+  });
+
+  it("opens the multiplayer entry from the menu and goes back", async () => {
+    const mp = fakeMultiplayer();
+    await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });
+    fireEvent.click(screen.getByRole("button", { name: "Multijugador" }));
+    expect(screen.getByRole("heading", { name: "Estableciendo enlace" })).toBeInTheDocument();
+    act(() => mp.socket().serverConnect());
+    expect(screen.getByRole("heading", { name: "Multijugador" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Volver al menú" }));
+    expect(screen.getByRole("button", { name: "Jugar contra la IA" })).toBeInTheDocument();
+    expect(mp.socket().disconnectCalls).toBeGreaterThan(0);
+  });
+
+  it("goes straight to the join flow when opened with an invitation link", async () => {
+    window.history.replaceState(null, "", "/?sala=abc234");
+    const mp = fakeMultiplayer();
+    await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });
+    act(() => mp.socket().serverConnect());
+    expect(screen.getByText("Te han invitado a la sala ABC234")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Código de sala" })).toHaveValue("ABC234");
+  });
+
+  it("plays the online flow: create, wait, deploy and battle against a human", async () => {
+    const mp = fakeMultiplayer();
+    await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });
+    fireEvent.click(screen.getByRole("button", { name: "Multijugador" }));
+    const socket = mp.socket();
+    act(() => socket.serverConnect());
+    fireEvent.change(screen.getByRole("textbox", { name: "Tu alias de comandante" }), {
+      target: { value: "Ana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear sala privada" }));
+    await act(async () => {
+      socket.reply("room:create", { ok: true, code: "ABC234", token: "t".repeat(20), seat: 0 });
+      socket.serverEmit("room:state", roomState({ players: twoPlayers() }));
+    });
+    expect(screen.getByRole("heading", { name: "Sala de espera" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Listo" }));
+    expect(socket.last("room:ready").payload).toHaveProperty("actionId");
+
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        roomState({ players: twoPlayers({ ready: true }), view: fakeView({ phase: "placement" }) }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Despliegue aleatorio" }));
+    fireEvent.click(screen.getByRole("button", { name: "Flota lista" }));
+    expect(socket.last("fleet:submit").payload.fleet).toHaveLength(5);
+
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        roomState({
+          players: twoPlayers({ ready: true }),
+          view: fakeView({ phase: "battle", turn: 0 }),
+          turnDeadline: Date.now() + 30_000,
+        }),
+      ),
+    );
+    expect(screen.getByText("vs Bruno")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Tu turno" })).toHaveTextContent("30 s");
+    expect(transmission()).toBeNull();
+    const [first] = within(radar()).getAllByRole("button");
+    if (!first) throw new Error("radar has no cells");
+    fireEvent.click(first);
+    expect(socket.last("shot:fire").payload.coord).toEqual({ col: 0, row: 0 });
+    await act(async () => {
+      socket.reply("shot:fire", { ok: false, error: "NOT_YOUR_TURN" });
+    });
+    expect(screen.getByText("No es tu turno.")).toBeInTheDocument();
   });
 });
 
