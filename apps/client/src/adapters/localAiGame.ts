@@ -156,7 +156,11 @@ export class LocalAiGame {
     const delay = min + Math.floor(this.rng() * (max - min + 1));
     this.cancelAiTurn = this.schedule(() => {
       this.cancelAiTurn = null;
-      const coord = this.ai.chooseShot(publicBoardView(this.state, HUMAN), this.rng);
+      const coord = this.ai.chooseShot(
+        publicBoardView(this.state, HUMAN),
+        this.state.rules,
+        this.rng,
+      );
       this.applyShot(AI, coord);
       this.aiThinking = false;
       // With the extra-turn variant the AI may keep the turn.

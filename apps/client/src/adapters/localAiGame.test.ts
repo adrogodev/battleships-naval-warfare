@@ -1,4 +1,11 @@
-import { allCoords, createRng, DEFAULT_RULES, randomFleet } from "@battleships/shared";
+import {
+  allCoords,
+  createRng,
+  DEFAULT_RULES,
+  type Difficulty,
+  randomFleet,
+  validateFleet,
+} from "@battleships/shared";
 import { describe, expect, it } from "vitest";
 import { LocalAiGame, type Scheduler } from "./localAiGame";
 
@@ -19,10 +26,10 @@ function manualScheduler() {
   return { scheduler, queue, flush };
 }
 
-function startGame(seed = 1) {
+function startGame(seed = 1, difficulty: Difficulty = "easy") {
   const clock = manualScheduler();
   const game = new LocalAiGame({
-    difficulty: "easy",
+    difficulty,
     seed,
     thinkDelayMs: { min: 400, max: 900 },
     schedule: clock.scheduler,
@@ -90,5 +97,22 @@ describe("LocalAiGame", () => {
     game.dispose();
     expect(clock.queue).toHaveLength(0);
     unsubscribe();
+  });
+
+  it.each(["normal", "hard"] as const)("plays a whole game against the %s AI", (difficulty) => {
+    const { game, clock } = startGame(11, difficulty);
+    for (const coord of allCoords(10)) {
+      if (game.getSnapshot().view.phase === "finished") break;
+      expect(game.fire(coord)).toBeNull();
+      clock.flush();
+    }
+    const snapshot = game.getSnapshot();
+    expect(snapshot.view.phase).toBe("finished");
+    expect(snapshot.view.winner).not.toBeNull();
+    expect(clock.queue).toHaveLength(0);
+    const aiFleet = snapshot.revealedEnemyFleet ?? [];
+    expect(validateFleet(aiFleet, DEFAULT_RULES)).toEqual({ ok: true });
+    const aiShots = snapshot.log.filter((entry) => entry.seat === 1);
+    expect(new Set(aiShots.map((e) => `${e.coord.col}:${e.coord.row}`)).size).toBe(aiShots.length);
   });
 });
