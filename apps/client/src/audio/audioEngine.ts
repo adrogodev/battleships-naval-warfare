@@ -170,6 +170,8 @@ export class AudioEngine {
    */
   unlock(): Promise<void> {
     if (this.disposed || this.isUnlocked) return Promise.resolve();
+    // A later gesture retries a resume() the browser left pending; the first promise settles then.
+    if (this.unlocking && this.ctx?.state === "suspended") this.ctx.resume().catch(() => undefined);
     this.unlocking ??= this.doUnlock().finally(() => {
       this.unlocking = null;
     });
