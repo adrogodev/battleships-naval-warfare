@@ -218,3 +218,25 @@ describe("leaving and rematch", () => {
     expect(JSON.stringify(before)).toBe(snapshot);
   });
 });
+
+describe("turn timer", () => {
+  it("passes the turn when the player on turn times out", () => {
+    const result = reduce(inBattle(), { type: "timeout", seat: 0 });
+    expect(result.ok && result.state.turn).toBe(1);
+    expect(result.ok && result.events).toEqual([
+      { type: "turnTimedOut", seat: 0 },
+      { type: "turnChanged", turn: 1 },
+    ]);
+  });
+
+  it("rejects a timeout for the player not on turn or outside the battle", () => {
+    expect(reduce(inBattle(), { type: "timeout", seat: 1 })).toMatchObject({
+      ok: false,
+      error: "not_your_turn",
+    });
+    expect(reduce(inPlacement(), { type: "timeout", seat: 0 })).toMatchObject({
+      ok: false,
+      error: "wrong_phase",
+    });
+  });
+});

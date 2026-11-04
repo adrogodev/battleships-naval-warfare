@@ -32,7 +32,9 @@ export type Action =
   | { type: "submitFleet"; seat: Seat; fleet: readonly Placement[] }
   | { type: "fire"; seat: Seat; coord: Coord }
   | { type: "leave"; seat: Seat }
-  | { type: "requestRematch"; seat: Seat };
+  | { type: "requestRematch"; seat: Seat }
+  /** The optional turn timer ran out: the turn passes without a shot. */
+  | { type: "timeout"; seat: Seat };
 
 export type GameEvent =
   | { type: "playerJoined"; seat: Seat }
@@ -41,6 +43,7 @@ export type GameEvent =
   | { type: "shotResolved"; seat: Seat; coord: Coord; result: "miss" | "hit" }
   | { type: "shotResolved"; seat: Seat; coord: Coord; result: "sunk"; shipId: ShipId }
   | { type: "turnChanged"; turn: Seat }
+  | { type: "turnTimedOut"; seat: Seat }
   | { type: "gameOver"; winner: Seat; reason: GameOverReason }
   | { type: "rematchRequested"; seat: Seat };
 
@@ -107,7 +110,23 @@ export function reduce(state: GameState, action: Action): ReduceResult {
       return leave(state, action.seat);
     case "requestRematch":
       return requestRematch(state, action.seat);
+    case "timeout":
+      return timeout(state, action.seat);
   }
+}
+
+function timeout(state: GameState, seat: Seat): ReduceResult {
+  if (state.phase !== "battle") return fail("wrong_phase");
+  if (state.turn !== seat) return fail("not_your_turn");
+  const turn = opponentOf(seat);
+  return {
+    ok: true,
+    state: { ...state, turn, turnNumber: state.turnNumber + 1 },
+    events: [
+      { type: "turnTimedOut", seat },
+      { type: "turnChanged", turn },
+    ],
+  };
 }
 
 function join(state: GameState, seat: Seat): ReduceResult {
