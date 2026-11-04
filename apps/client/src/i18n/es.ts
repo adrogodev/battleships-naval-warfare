@@ -1,12 +1,23 @@
 import type { ShipId } from "@battleships/shared";
 
+type Gender = "m" | "f";
+
 /** All user-facing Spanish copy lives here so English can be added later without touching screens. */
 export const es = {
-  appName: "Battleships: Naval Warfare",
+  appName: "Battleships",
+  appTagline: "Naval Warfare",
+  boot: {
+    start: "Pulsa para comenzar",
+    hint: "Activa el sonido del centro de mando",
+  },
   menu: {
     subtitle: "Centro de información de combate",
     playAi: "Jugar contra la IA",
-    difficultyEasy: "Dificultad: Fácil · Alférez",
+    settings: "Configuración",
+    difficultyEasy: "Rival: Alférez · Dificultad fácil",
+  },
+  commanders: {
+    easy: { rank: "Alférez", name: "Alférez Ruiz" },
   },
   ships: {
     carrier: "Portaaviones",
@@ -15,6 +26,85 @@ export const es = {
     submarine: "Submarino",
     destroyer: "Destructor",
   } satisfies Record<ShipId, string>,
+  operation: {
+    prefix: "Operación",
+    nouns: [
+      { word: "Tridente", gender: "m" },
+      { word: "Marea", gender: "f" },
+      { word: "Halcón", gender: "m" },
+      { word: "Tormenta", gender: "f" },
+      { word: "Arrecife", gender: "m" },
+      { word: "Faro", gender: "m" },
+      { word: "Neblina", gender: "f" },
+      { word: "Brújula", gender: "f" },
+      { word: "Coral", gender: "m" },
+      { word: "Corriente", gender: "f" },
+    ] satisfies readonly { word: string; gender: Gender }[],
+    adjectives: [
+      { m: "Gris", f: "Gris" },
+      { m: "Silencioso", f: "Silenciosa" },
+      { m: "Rojo", f: "Roja" },
+      { m: "Helado", f: "Helada" },
+      { m: "Oscuro", f: "Oscura" },
+      { m: "Profundo", f: "Profunda" },
+      { m: "Austral", f: "Austral" },
+      { m: "Veloz", f: "Veloz" },
+      { m: "Plateado", f: "Plateada" },
+      { m: "Nocturno", f: "Nocturna" },
+    ] satisfies readonly { m: string; f: string }[],
+  },
+  /** Communications officer. {coord} and {ship} are replaced. */
+  comms: {
+    own: {
+      miss: [
+        "Agua en {coord}.",
+        "Sin contacto en {coord}.",
+        "Disparo al agua en {coord}.",
+        "Nada en {coord}. Reajustando.",
+      ],
+      hit: [
+        "Impacto confirmado en {coord}.",
+        "¡Blanco alcanzado en {coord}!",
+        "Impacto en {coord}. Mantengan el fuego.",
+        "Daños visibles en {coord}.",
+      ],
+      sunk: [
+        "{ship} enemigo hundido ({coord}).",
+        "¡{ship} enemigo a pique en {coord}!",
+        "Confirmado: {ship} enemigo hundido ({coord}).",
+      ],
+    },
+    enemy: {
+      miss: [
+        "El enemigo falla en {coord}.",
+        "Proyectil enemigo al agua en {coord}.",
+        "Disparo enemigo sin efecto en {coord}.",
+      ],
+      hit: [
+        "Nos alcanzan en {coord}.",
+        "¡Impacto recibido en {coord}!",
+        "Daños en {coord}. Control de averías en marcha.",
+      ],
+      sunk: [
+        "Hemos perdido el {ship} ({coord}).",
+        "El {ship} se hunde ({coord}).",
+        "{ship} perdido en {coord}. Resistan.",
+      ],
+    },
+  },
+  /** Visual captions for every relevant sound (the game is fully playable muted). */
+  captions: {
+    lock: "Blanco fijado",
+    fire: "Cañonazo",
+    whistle: "Silbido de proyectil",
+    miss: "Salpicadura",
+    hit: "Explosión",
+    sunk: "Casco partiéndose",
+    turn: "Alerta de turno",
+    victory: "Fanfarria de victoria",
+    defeat: "Alarma lejana",
+    place: "Barco en posición",
+  },
   deploy: {
     title: "Despliegue de flota",
     dock: "Muelle",
@@ -25,7 +115,7 @@ export const es = {
     random: "Despliegue aleatorio",
     reset: "Reiniciar",
     ready: "Flota lista",
-    help: "Elige un barco, toca la casilla de proa y gira con R. Toca un barco desplegado para devolverlo al muelle. Teclado: flechas para moverte, Enter para colocar, Escape para cancelar.",
+    help: "Arrastra un barco al tablero o selecciónalo y toca la casilla de proa. Gira con R, con el botón o con doble toque. Toca un barco desplegado para devolverlo al muelle. Teclado: flechas, Enter para colocar, Escape para cancelar.",
     boardLabel: "Tablero de despliegue",
     horizontal: "horizontal",
     vertical: "vertical",
@@ -41,7 +131,13 @@ export const es = {
   battle: {
     radar: "Radar · Flota enemiga",
     deck: "Cubierta · Mi flota",
+    tabRadar: "Radar",
+    tabDeck: "Mi flota",
+    viewSwitch: "Tablero visible",
     yourTurn: "Tu turno · Fija un blanco",
+    confirmHint: "Toca de nuevo para disparar",
+    shotInFlight: "Disparo en curso",
+    incoming: "¡Fuego enemigo entrante!",
     enemyTurn: "Turno enemigo",
     aiThinking: "El enemigo calcula su disparo…",
     ownFleet: "Mi flota",
@@ -56,6 +152,12 @@ export const es = {
     damaged: "Dañado",
     sunk: "Hundido",
     unconfirmed: "Sin confirmar",
+    shots: "Disparos",
+    accuracy: "Precisión",
+    streak: (n: number) => `Racha ×${n}`,
+    lastShipEnemy: "Último barco enemigo a flote",
+    lastShipOwn: "¡Solo nos queda un barco!",
+    versus: (name: string) => `vs ${name}`,
   },
   cell: {
     empty: "sin disparar",
@@ -64,15 +166,12 @@ export const es = {
     miss: "agua",
     hit: "impacto",
     sunk: "hundido",
+    blocked: "descartada por la regla de no contacto",
+    aiming: "apuntando",
   },
-  log: {
-    ownMiss: (coord: string) => `Agua en ${coord}.`,
-    ownHit: (coord: string) => `Impacto confirmado en ${coord}.`,
-    ownSunk: (ship: string, coord: string) => `${ship} enemigo hundido en ${coord}.`,
-    enemyMiss: (coord: string) => `El enemigo falla en ${coord}.`,
-    enemyHit: (coord: string) => `Nos alcanzan en ${coord}.`,
-    enemySunk: (ship: string, coord: string) =>
-      `Han hundido nuestro ${ship.toLowerCase()} (${coord}).`,
+  finale: {
+    victory: "Victoria",
+    defeat: "Derrota",
   },
   results: {
     victory: "Victoria",
@@ -83,12 +182,35 @@ export const es = {
     shots: "Disparos",
     accuracy: "Precisión",
     streak: "Racha máxima",
-    firstSink: "Primer hundimiento",
+    firstSink: "Primer hundimiento (disparo)",
     firstSinkNone: "—",
     duration: "Duración",
     playAgain: "Jugar otra vez",
     menu: "Volver al menú",
     finalMaps: "Mapas finales",
+  },
+  settings: {
+    title: "Configuración",
+    audio: "Audio",
+    music: "Música",
+    sfx: "Efectos",
+    ambient: "Ambiente",
+    ambientEnabled: "Sonido ambiental (mar y radio)",
+    mute: "Silencio general",
+    vibration: "Vibración",
+    vibrationUnsupported: "Este dispositivo no admite vibración.",
+    motion: "Movimiento",
+    motionSystem: "Según el sistema",
+    motionReduced: "Reducido",
+    motionFull: "Completo",
+    gameplay: "Juego",
+    showBlocked: "Sombrear casillas descartadas por la regla de no contacto",
+    confirmShot: "Confirmación de disparo",
+    confirmAuto: "Solo en pantallas táctiles",
+    confirmAlways: "Siempre",
+    confirmNever: "Nunca",
+    reset: "Restablecer ajustes",
+    back: "Volver",
   },
 } as const;
 

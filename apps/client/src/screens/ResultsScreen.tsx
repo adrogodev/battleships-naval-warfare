@@ -6,7 +6,7 @@ import {
   shipCells,
 } from "@battleships/shared";
 import type { GameSnapshot } from "../adapters/localAiGame";
-import { Board, type CellView } from "../components/Board";
+import { Board, type BoardShip, type CellView } from "../components/Board";
 import { t } from "../i18n/es";
 
 interface ResultsScreenProps {
@@ -22,36 +22,51 @@ function formatDuration(ms: number): string {
   return `${minutes}:${seconds}`;
 }
 
-function revealedCell(
+/** Final map: every ship revealed, sunk ones marked, plus all shots. */
+function revealedBoard(
   fleet: readonly Placement[],
   specs: readonly ShipSpec[],
   shots: Readonly<Record<string, "miss" | "hit">>,
+  sunk: ReadonlySet<string>,
 ) {
-  const ships = new Set<string>();
-  for (const placement of fleet) {
+  const shipKeys = new Set<string>();
+  const ships: BoardShip[] = fleet.map((placement) => {
     const length = specs.find((ship) => ship.id === placement.shipId)?.length ?? 0;
-    for (const cell of shipCells(placement, length)) ships.add(coordKey(cell));
-  }
-  return (coord: Coord): CellView => {
+    const cells = shipCells(placement, length);
+    for (const cell of cells) shipKeys.add(coordKey(cell));
+    const isSunk = sunk.has(placement.shipId);
+    const damaged = cells.some((cell) => shots[coordKey(cell)] === "hit");
+    return { placement, length, state: isSunk ? "sunk" : damaged ? "damaged" : "intact" };
+  });
+  const cellAt = (coord: Coord): CellView => {
     const key = coordKey(coord);
     const mark = shots[key];
-    if (mark === "hit") return { kind: "hit", label: t.cell.hit };
-    if (mark === "miss") return { kind: "miss", label: t.cell.miss };
-    return ships.has(key)
-      ? { kind: "ship", label: t.cell.ship }
-      : { kind: "empty", label: t.cell.water };
+    if (mark) return { kind: mark, label: t.cell[mark] };
+    return { kind: "empty", label: shipKeys.has(key) ? t.cell.ship : t.cell.water };
   };
+  return { ships, cellAt };
 }
 
 export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenProps) {
   const { view, stats, revealedEnemyFleet } = snapshot;
   const won = view.winner === view.you;
   const forfeited = !won && view.ownSunk.length < view.rules.fleet.length;
-  const text = won
-    ? t.results.victoryText
-    : forfeited
-      ? t.results.forfeitText
-      : t.results.defeatText;
+  let text: string = t.results.defeatText;
+  if (won) text = t.results.victoryText;
+  else if (forfeited) text = t.results.forfeitText;
+
+  const enemy = revealedBoard(
+    revealedEnemyFleet ?? [],
+    view.rules.fleet,
+    view.opponent.shots,
+    new Set(view.opponent.sunkShips.map((p) => p.shipId)),
+  );
+  const own = revealedBoard(
+    view.ownFleet ?? [],
+    view.rules.fleet,
+    view.ownShotsReceived,
+    new Set(view.ownSunk.map((s) => s.id)),
+  );
 
   return (
     <main className="screen results">
@@ -59,7 +74,7 @@ export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenPr
         {won ? t.results.victory : t.results.defeat}
       </h1>
       <p>{text}</p>
-      <dl className="results__stats">
+      <dl className="results__stats panel">
         <div>
           <dt className="label">{t.results.shots}</dt>
           <dd className="num">{stats.shots}</dd>
@@ -88,13 +103,16 @@ export function ResultsScreen({ snapshot, onPlayAgain, onMenu }: ResultsScreenPr
           size={view.rules.boardSize}
           label={t.battle.radar}
           variant="radar"
-          cellAt={revealedCell(revealedEnemyFleet ?? [], view.rules.fleet, view.opponent.shots)}
+          className="board--revealed"
+          cellAt={enemy.cellAt}
+          ships={enemy.ships}
         />
         <Board
           size={view.rules.boardSize}
           label={t.battle.deck}
           variant="deck"
-          cellAt={revealedCell(view.ownFleet ?? [], view.rules.fleet, view.ownShotsReceived)}
+          cellAt={own.cellAt}
+          ships={own.ships}
         />
       </div>
 

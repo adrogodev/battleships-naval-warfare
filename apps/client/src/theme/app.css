@@ -1,4 +1,7 @@
-/* Phase 1 functional styling. The final art pass (ocean, silhouettes, shot sequence) is Phase 2. */
+/*
+  Tactical layer (information) over the ocean layer (atmosphere).
+  Every raw value comes from tokens.css; durations from the --dur-* variables set by motion.ts.
+*/
 * {
   box-sizing: border-box;
 }
@@ -8,24 +11,39 @@ body {
 }
 body {
   min-height: 100vh;
-  background: radial-gradient(120% 90% at 50% 110%, #0a2238 0%, var(--c-abyss) 60%);
+  background: var(--c-abyss);
   color: var(--c-text);
   font-family: var(--font-body);
   font-size: var(--fs-md);
   line-height: 1.45;
+  overflow-x: hidden;
 }
-button {
+button,
+select,
+input {
   font: inherit;
   color: var(--c-text);
+}
+button {
+  min-height: var(--tap-min);
   background: var(--c-deep);
   border: 1px solid var(--c-steel);
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
+  clip-path: polygon(
+    var(--bevel-sm) 0,
+    100% 0,
+    100% calc(100% - var(--bevel-sm)),
+    calc(100% - var(--bevel-sm)) 100%,
+    0 100%,
+    0 var(--bevel-sm)
+  );
+  transition: border-color var(--dur-screen, 240ms) var(--ease-out);
 }
 button:hover:not(:disabled) {
   border-color: var(--c-sonar);
 }
-button:focus-visible {
+:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
@@ -45,6 +63,12 @@ button.primary {
 button.ghost {
   background: transparent;
 }
+select {
+  background: var(--c-deep);
+  border: 1px solid var(--c-steel);
+  padding: var(--space-2);
+  min-height: var(--tap-min);
+}
 .label {
   margin: 0;
   font-family: var(--font-display);
@@ -57,9 +81,15 @@ button.ghost {
 .num {
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 .dim {
   color: var(--c-text-dim);
+}
+.hint {
+  margin: 0;
+  color: var(--c-text-dim);
+  font-size: var(--fs-sm);
 }
 .sr-only {
   position: absolute;
@@ -70,8 +100,8 @@ button.ghost {
   white-space: nowrap;
 }
 .panel {
-  background: rgb(11 26 43 / 0.86);
-  box-shadow: 0 0 0 1px var(--c-steel);
+  background: var(--c-panel);
+  box-shadow: var(--shadow-panel);
   clip-path: polygon(
     var(--bevel) 0,
     100% 0,
@@ -81,43 +111,105 @@ button.ghost {
     0 var(--bevel)
   );
   padding: var(--space-4);
+  backdrop-filter: blur(6px);
 }
 
+/* Screens */
 .screen {
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--space-5) var(--space-4);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
+  /* Board cells are sized from the screen width (cqw), which excludes the scrollbar. */
+  container-type: inline-size;
+  animation: screen-in var(--dur-screen, 240ms) var(--ease-out);
+}
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 .screen__title,
-.menu__title,
 .results__title {
   margin: 0;
   font-family: var(--font-display);
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-title);
   text-transform: uppercase;
 }
+
+/* Logo, boot and menu */
+.logo {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+.logo__mark {
+  width: 72px;
+  height: 72px;
+}
+.logo__ring {
+  fill: none;
+  stroke: var(--c-sonar);
+  stroke-width: 1.5;
+}
+.logo__inner,
+.logo__cross {
+  fill: none;
+  stroke: var(--c-steel);
+  stroke-width: 1.2;
+}
+.logo__needle {
+  stroke: var(--c-sonar);
+  stroke-width: 2;
+  transform-origin: 17px 17px;
+  animation: sweep var(--dur-sweep, 6s) linear infinite;
+}
+.logo__name {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  font-family: var(--font-display);
+  font-size: var(--fs-xxl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-title);
+  line-height: 1;
+  text-transform: uppercase;
+}
+.logo__tagline {
+  font-size: var(--fs-lg);
+  color: var(--c-sonar);
+  letter-spacing: 0.3em;
+}
+.boot,
 .menu {
-  min-height: 80vh;
+  min-height: 90vh;
   place-content: center;
   justify-items: center;
   text-align: center;
 }
-.menu__title {
-  font-size: var(--fs-xl);
+.boot__start {
+  margin-top: var(--space-6);
+  animation: beacon-btn var(--dur-pulse, 1200ms) ease-in-out infinite alternate;
 }
-.hint {
-  margin: 0;
-  color: var(--c-text-dim);
-  font-size: var(--fs-sm);
+@keyframes beacon-btn {
+  to {
+    box-shadow: var(--shadow-glow);
+  }
+}
+.menu__actions {
+  display: grid;
+  gap: var(--space-3);
+  min-width: min(320px, 100%);
 }
 
 /* Boards */
 .board {
   display: grid;
-  grid-template-columns: 22px calc(var(--cell) * var(--size));
-  grid-template-rows: 22px calc(var(--cell) * var(--size));
+  grid-template-columns: var(--board-gutter) calc(var(--cell) * var(--size));
+  grid-template-rows: var(--board-gutter) calc(var(--cell) * var(--size));
 }
 .board__cols,
 .board__rows {
@@ -126,6 +218,7 @@ button.ghost {
   font-family: var(--font-display);
   font-size: var(--fs-xs);
   color: var(--c-text-dim);
+  font-variant-numeric: tabular-nums;
 }
 .board__cols {
   grid-column: 2;
@@ -138,27 +231,136 @@ button.ghost {
 .board__grid {
   grid-column: 2;
   grid-row: 2;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--size), var(--cell));
   grid-template-rows: repeat(var(--size), var(--cell));
   outline: 1px solid var(--c-steel);
+  touch-action: manipulation;
 }
+/* Own board: deck view, water and ships visible */
 .board--deck .board__grid {
-  background: var(--c-water);
+  background:
+    linear-gradient(var(--c-steel) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    linear-gradient(90deg, var(--c-steel) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    radial-gradient(
+      120% 120% at 30% 20%,
+      var(--c-water-light) 0%,
+      var(--c-water) 55%,
+      var(--c-deep) 100%
+    );
 }
+/* Enemy board: radar screen, dark with a slow sweep, only what was discovered */
 .board--radar .board__grid {
-  background: var(--c-radar);
+  background:
+    linear-gradient(var(--c-steel) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    linear-gradient(90deg, var(--c-steel) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      transparent 0 calc(var(--cell) * 2 - 1px),
+      var(--c-sonar-soft) calc(var(--cell) * 2 - 1px) calc(var(--cell) * 2)
+    ),
+    var(--c-radar);
+  overflow: hidden;
 }
+.board--radar .board__grid::before {
+  content: "";
+  position: absolute;
+  inset: -42%;
+  pointer-events: none;
+  z-index: var(--z-board-ship);
+  background: conic-gradient(from 0deg, var(--c-sonar-glow), transparent 50deg, transparent 360deg);
+  animation: sweep var(--dur-sweep, 6s) linear infinite;
+}
+.board--revealed .board__grid::before {
+  display: none;
+}
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ship silhouettes */
+.ship {
+  position: relative;
+  z-index: var(--z-board-ship);
+  padding: 3px;
+  pointer-events: none;
+}
+.ship svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.hull {
+  fill: var(--ship-hull, var(--c-hull));
+  stroke: var(--ship-line, var(--c-hull-line));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.detail {
+  fill: none;
+  stroke: var(--ship-line, var(--c-hull-line));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.85;
+}
+.detail-fill {
+  fill: var(--ship-line, var(--c-hull-line));
+  opacity: 0.85;
+}
+.ship--sunk {
+  animation: sink 3.2s ease-in-out infinite alternate;
+}
+.ship--sunk svg {
+  filter: grayscale(1) brightness(0.8);
+}
+.ship--sunk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent, var(--c-water));
+  opacity: 0.45;
+}
+@keyframes sink {
+  from {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  to {
+    transform: scale(0.96);
+    opacity: 0.6;
+  }
+}
+.board--radar .ship--sunk {
+  --ship-hull: var(--c-sunk-soft);
+  --ship-line: var(--c-sunk);
+}
+.board--radar .ship--sunk svg {
+  filter: none;
+}
+.board--radar .ship--sunk::after {
+  display: none;
+}
+.board--radar.board--revealed .ship:not(.ship--sunk) {
+  --ship-hull: var(--c-sonar-soft);
+  --ship-line: var(--c-sonar);
+}
+
+/* Cells: every state has its own shape, not only its colour */
 .cell {
   position: relative;
+  z-index: var(--z-board-cell);
   display: grid;
   place-items: center;
   margin: 0;
   padding: 0;
+  min-height: 0;
   border: 0;
-  border-right: 1px solid var(--c-steel);
-  border-bottom: 1px solid var(--c-steel);
   background: transparent;
+  clip-path: none;
 }
 button.cell {
   cursor: crosshair;
@@ -166,62 +368,200 @@ button.cell {
 button.cell[aria-disabled="true"] {
   cursor: not-allowed;
 }
-button.cell:focus-visible,
-.board--radar button.cell:hover:not([aria-disabled="true"]) {
-  outline: 2px solid var(--c-sonar);
-  outline-offset: -3px;
-  background: rgb(63 224 208 / 0.1);
+button.cell:focus-visible {
+  outline: none;
 }
-.cell--ship {
-  background: var(--c-hull);
-}
-/* Every state has its own shape, not only its colour. */
-.cell--miss::before {
+/* Miss — radar: dot with ring; deck: splash ripples */
+.board--radar .cell--miss::before {
   content: "";
-  width: 24%;
+  width: 22%;
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--c-miss);
-  box-shadow: 0 0 0 4px rgb(143 166 189 / 0.25);
 }
-.cell--hit::before,
-.cell--hit::after,
-.cell--sunk::before,
-.cell--sunk::after {
+.board--radar .cell--miss::after {
   content: "";
   position: absolute;
-  width: 60%;
+  width: 52%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--c-miss-soft);
+}
+.board--deck .cell--miss::before {
+  content: "";
+  width: 56%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-round);
+  border: 1.5px solid var(--c-miss);
+  box-shadow:
+    inset 0 0 0 5px var(--c-water),
+    inset 0 0 0 6.5px var(--c-miss-soft);
+}
+/* Hit — radar: X with a brief pulse; deck: fire and smoke on the section */
+.board--radar .cell--hit,
+.board--radar .cell--sunk {
+  background: var(--c-hit-soft);
+  box-shadow: inset 0 0 0 1px var(--c-hit-soft);
+}
+.board--radar .cell--hit::before,
+.board--radar .cell--hit::after,
+.board--radar .cell--sunk::before,
+.board--radar .cell--sunk::after {
+  content: "";
+  position: absolute;
+  width: 62%;
   height: 3px;
   background: var(--c-hit);
 }
-.cell--hit::before,
-.cell--sunk::before {
+.board--radar .cell--sunk::before,
+.board--radar .cell--sunk::after {
+  width: 46%;
+  height: 2px;
+  background: var(--c-sunk);
+}
+.board--radar .cell--hit::before,
+.board--radar .cell--sunk::before {
   transform: rotate(45deg);
 }
-.cell--hit::after,
-.cell--sunk::after {
+.board--radar .cell--hit::after,
+.board--radar .cell--sunk::after {
   transform: rotate(-45deg);
 }
-.cell--hit {
-  background: rgb(255 90 54 / 0.15);
+.board--radar .cell--hit {
+  animation: hitpulse var(--dur-pulse, 1200ms) var(--ease-out) 1;
 }
-.cell--sunk {
-  background: rgb(179 38 30 / 0.45);
+@keyframes hitpulse {
+  from {
+    box-shadow:
+      inset 0 0 0 1px var(--c-hit),
+      0 0 0 0 var(--c-hit);
+  }
+  to {
+    box-shadow:
+      inset 0 0 0 1px var(--c-hit-soft),
+      0 0 0 12px transparent;
+  }
 }
-.cell--sunk::before,
-.cell--sunk::after {
-  background: var(--c-text);
-  height: 2px;
+.board--deck .cell--hit::before,
+.board--deck .cell--sunk::before {
+  content: "";
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50% 50% 45% 45%;
+  background: radial-gradient(
+    circle at 50% 65%,
+    var(--c-flame) 0 18%,
+    var(--c-warning) 30%,
+    var(--c-hit) 55%,
+    transparent 72%
+  );
+  animation: flicker 420ms ease-in-out infinite alternate;
 }
+.board--deck .cell--hit::after {
+  content: "";
+  position: absolute;
+  width: 70%;
+  aspect-ratio: 1;
+  top: -30%;
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle, var(--c-miss-soft), transparent 70%);
+  animation: smoke 2.4s ease-out infinite;
+}
+.board--deck .cell--sunk::before {
+  opacity: 0.45;
+}
+@keyframes flicker {
+  from {
+    transform: scale(0.92) translateY(1px);
+  }
+  to {
+    transform: scale(1.06) translateY(-1px);
+  }
+}
+@keyframes smoke {
+  from {
+    transform: translateY(6px) scale(0.6);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateY(-10px) scale(1.3);
+    opacity: 0;
+  }
+}
+/* Ruled out by the no-contact rule (optional) */
+.cell--blocked {
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--c-miss-soft) 5px 6px);
+}
+/* Deployment ghost */
 .cell--ghost-ok {
-  background: rgb(63 224 208 / 0.45);
+  background: var(--c-sonar-glow);
+  box-shadow: inset 0 0 0 1px var(--c-sonar);
 }
 .cell--ghost-bad {
-  background: repeating-linear-gradient(
-    135deg,
-    rgb(255 90 54 / 0.55) 0 5px,
-    rgb(255 90 54 / 0.25) 5px 10px
-  );
+  background: repeating-linear-gradient(135deg, var(--c-hit-soft) 0 5px, var(--c-hit) 5px 7px);
+}
+/* Aim reticle with coordinate tag (hover, keyboard focus or tap-to-aim) */
+.cell--aim,
+.board--radar button.cell:focus-visible {
+  z-index: var(--z-board-aim);
+  background:
+    linear-gradient(var(--c-sonar), var(--c-sonar)) top left / 8px 2px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) top left / 2px 8px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) top right / 8px 2px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) top right / 2px 8px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) bottom left / 8px 2px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) bottom left / 2px 8px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) bottom right / 8px 2px no-repeat,
+    linear-gradient(var(--c-sonar), var(--c-sonar)) bottom right / 2px 8px no-repeat,
+    var(--c-sonar-soft);
+}
+.board--deck button.cell:focus-visible {
+  z-index: var(--z-board-aim);
+  box-shadow: inset 0 0 0 2px var(--c-signal);
+}
+.cell--aim.cell--empty::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-round);
+  border: 1.5px solid var(--c-sonar);
+}
+.cell__tag {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  color: var(--c-abyss);
+  background: var(--c-sonar);
+  padding: 1px 6px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Incoming projectile (suspense phase) */
+.cell--incoming {
+  z-index: var(--z-board-aim);
+}
+.cell--incoming::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--c-warning);
+  border-radius: var(--radius-round);
+  animation: incoming var(--dur-suspense, 300ms) ease-in forwards;
+}
+@keyframes incoming {
+  from {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(0.4);
+    opacity: 1;
+  }
 }
 
 /* Deploy */
@@ -231,8 +571,15 @@ button.cell:focus-visible,
   gap: var(--space-5);
   align-items: start;
 }
+.deploy__board {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
 .dock {
+  flex: 1;
   min-width: 260px;
+  max-width: 380px;
   display: grid;
   gap: var(--space-3);
 }
@@ -245,10 +592,23 @@ button.cell:focus-visible,
 }
 .dock__ship {
   width: 100%;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--space-3);
   text-align: left;
+  touch-action: none;
+}
+.dock__silhouette {
+  height: 18px;
+  display: block;
+}
+.dock__silhouette :where(svg) {
+  width: 100%;
+  height: 100%;
+}
+.dock__ship.is-placed .dock__silhouette {
+  opacity: 0.4;
 }
 .dock__ship.is-selected {
   border-color: var(--c-sonar);
@@ -264,11 +624,6 @@ button.cell:focus-visible,
   display: grid;
   gap: var(--space-2);
 }
-.deploy__board {
-  display: grid;
-  gap: var(--space-3);
-  justify-items: start;
-}
 .status {
   min-height: 1.5em;
   margin: 0;
@@ -277,8 +632,47 @@ button.cell:focus-visible,
 .status--bad {
   color: var(--c-hit);
 }
+.drag-ghost {
+  position: fixed;
+  z-index: var(--z-overlay);
+  height: 24px;
+  transform: translate(-12px, -50%);
+  pointer-events: none;
+  opacity: 0.85;
+}
+.drag-ghost :where(svg) {
+  width: 100%;
+  height: 100%;
+}
 
 /* Battle */
+.battle {
+  max-width: 1480px;
+}
+.battle__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.battle__header p {
+  margin: 0;
+}
+.battle__opponent {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.battle__stats {
+  display: flex;
+  gap: var(--space-5);
+  margin: 0;
+}
+.battle__stats dd,
+.results__stats dd {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
 .turn {
   display: flex;
   align-items: center;
@@ -286,6 +680,7 @@ button.cell:focus-visible,
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--c-sonar);
   color: var(--c-sonar);
+  background: var(--c-sonar-soft);
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: var(--tracking-label);
@@ -294,12 +689,22 @@ button.cell:focus-visible,
 .turn--enemy {
   border-color: var(--c-warning);
   color: var(--c-warning);
+  background: transparent;
 }
 .turn__dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: currentColor;
+  animation: beacon var(--dur-pulse, 1200ms) ease-out infinite;
+}
+@keyframes beacon {
+  from {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
 }
 .battle__layout {
   display: grid;
@@ -313,16 +718,51 @@ button.cell:focus-visible,
   gap: var(--space-5);
   justify-content: center;
 }
+.board-wrap {
+  display: grid;
+  gap: var(--space-2);
+}
+.board-wrap.is-shaking {
+  animation: shake var(--dur-shake, 150ms) ease-out;
+}
+@keyframes shake {
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  50% {
+    transform: translate(2px, -1px);
+  }
+  75% {
+    transform: translate(-1px, 0);
+  }
+}
 .battle__side {
   display: grid;
   gap: var(--space-4);
 }
 .board-title {
-  margin: 0 0 var(--space-2);
+  margin: 0;
   font-family: var(--font-display);
   font-size: var(--fs-md);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.viewswitch {
+  display: flex;
+}
+.viewswitch button {
+  flex: 1;
+  clip-path: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+.viewswitch button.is-active {
+  background: var(--c-sonar);
+  color: var(--c-abyss);
+  border-color: var(--c-sonar);
 }
 .fleet ul,
 .log {
@@ -364,12 +804,33 @@ button.cell:focus-visible,
   padding-left: var(--space-2);
   border-left: 2px solid var(--c-steel);
 }
-.log__entry--hit,
-.log__entry--sunk {
+.log__entry--hit {
   border-color: var(--c-hit);
+}
+.log__entry--sunk {
+  border-color: var(--c-sunk);
+  background: var(--c-sunk-soft);
+  font-weight: 600;
 }
 .log__entry--seat1 {
   border-color: var(--c-warning);
+}
+.streak {
+  display: inline-block;
+  margin: var(--space-3) 0 0;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--c-warning);
+  color: var(--c-warning);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  animation: streak-in var(--dur-result, 250ms) var(--ease-out);
+}
+@keyframes streak-in {
+  from {
+    transform: scale(1.4);
+    opacity: 0;
+  }
 }
 .confirm {
   display: grid;
@@ -378,10 +839,82 @@ button.cell:focus-visible,
 .confirm p {
   margin: 0;
 }
+.alert,
+.banner,
+.caption {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: var(--z-overlay);
+  text-align: center;
+  pointer-events: none;
+}
+.alert {
+  top: var(--space-3);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--c-warning);
+  background: var(--c-scrim);
+  color: var(--c-warning);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--fs-sm);
+}
+.banner {
+  top: 38%;
+  padding: var(--space-3) var(--space-5);
+  background: var(--c-scrim);
+  border-top: 2px solid var(--c-sunk);
+  border-bottom: 2px solid var(--c-sunk);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: banner-in var(--dur-result, 250ms) var(--ease-out);
+}
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+.caption {
+  bottom: var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  background: var(--c-scrim);
+  color: var(--c-text-dim);
+  font-size: var(--fs-sm);
+  font-style: italic;
+}
+.finale {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  place-items: center;
+  background: var(--c-scrim);
+  animation: screen-in var(--dur-screen, 240ms) var(--ease-out);
+}
+.finale p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xxl);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-warning);
+}
+.finale--victory p {
+  color: var(--c-sonar);
+  text-shadow: var(--shadow-glow);
+}
 
 /* Results */
 .results__title {
-  font-size: var(--fs-xl);
+  font-size: var(--fs-xxl);
   color: var(--c-warning);
 }
 .results__title.is-victory {
@@ -393,19 +926,48 @@ button.cell:focus-visible,
   gap: var(--space-5);
   margin: 0;
 }
-.results__stats dd {
-  margin: 0;
-  font-size: var(--fs-lg);
-}
-.results__actions {
+.results__actions,
+.settings__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
 }
 
-.battle {
-  max-width: 1480px;
+/* Settings */
+.settings {
+  max-width: 720px;
 }
-/* Below this width the three columns cannot hold both boards side by side. */
+.settings__group {
+  display: grid;
+  gap: var(--space-3);
+}
+.settings__slider {
+  display: grid;
+  grid-template-columns: 120px 1fr 48px;
+  align-items: center;
+  gap: var(--space-3);
+}
+.settings__slider input {
+  accent-color: var(--c-sonar);
+  min-height: var(--tap-min);
+}
+.settings__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+}
+.settings__toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-sonar);
+}
+.settings__select {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* Responsive */
 @media (max-width: 1479px) {
   .battle__layout {
     grid-template-columns: 1fr 1fr;
@@ -416,13 +978,51 @@ button.cell:focus-visible,
   }
 }
 @media (max-width: 1023px) {
-  .battle__layout {
-    grid-template-columns: 1fr;
+  /* Tablet: side by side only while cells stay >= 32 px, otherwise stacked. */
+  :root {
+    --cell: clamp(32px, calc((100cqw - 2 * var(--board-gutter) - var(--space-5)) / 20), 40px);
   }
 }
 @media (max-width: 767px) {
+  /* Mobile: one full-width board; cells never below the 32 px touch target. */
   :root {
-    --cell: clamp(28px, calc((100vw - 32px - 22px) / 10), 40px);
+    --board-gutter: 18px;
+    --cell: clamp(32px, calc((100cqw - var(--board-gutter)) / 10), 40px);
+  }
+  .screen {
+    padding: var(--space-4) var(--space-2);
+  }
+  .battle__layout {
+    grid-template-columns: 1fr;
+  }
+  .battle__own-fleet {
+    order: 1;
+  }
+  .battle__header {
+    gap: var(--space-2);
+  }
+  .turn {
+    width: 100%;
+    font-size: var(--fs-sm);
+  }
+  .deploy__layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dock {
+    min-width: 0;
+    max-width: none;
+  }
+  .dock__ship {
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .settings__slider {
+    grid-template-columns: 1fr 48px;
+  }
+  .settings__slider span:first-child {
+    grid-column: 1 / -1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -430,8 +1030,20 @@ button.cell:focus-visible,
   *::before,
   *::after {
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every animation */
-    animation: none !important;
+    animation-duration: 1ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every animation */
+    animation-iteration-count: 1 !important;
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override every transition */
-    transition: none !important;
+    transition-duration: 1ms !important;
   }
+}
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion setting must override every animation */
+  animation-duration: 1ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion setting must override every animation */
+  animation-iteration-count: 1 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: the reduced-motion setting must override every transition */
+  transition-duration: 1ms !important;
 }

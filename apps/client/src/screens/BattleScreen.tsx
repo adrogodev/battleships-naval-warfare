@@ -1,147 +1,381 @@
 import {
   type Coord,
   coordKey,
-  coordLabel,
   type Placement,
-  type PlayerView,
   type ShipSpec,
+  sameCoord,
   shipCells,
 } from "@battleships/shared";
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSnapshot, LogEntry } from "../adapters/localAiGame";
-import { Board, type CellView } from "../components/Board";
+import type { HapticCue } from "../app/haptics";
+import type { MusicIntensity, SfxId } from "../audio";
+import { currentStreak, musicIntensity, presentBoard } from "../battle/presentation";
+import { Board, type BoardShip, type CellView } from "../components/Board";
+import { burstPreset, fxBus } from "../fx";
 import { t } from "../i18n/es";
+import { commsLine } from "../narrative/narrative";
+import { type ShotPhase, ShotQueue } from "../sequence/shotQueue";
+import type { MotionTokens } from "../theme/motion";
+
+export interface BattleEffects {
+  readonly play: (id: SfxId) => void;
+  readonly setIntensity: (level: MusicIntensity) => void;
+  readonly vibrate: (cue: HapticCue) => void;
+}
 
 interface BattleScreenProps {
   readonly snapshot: GameSnapshot;
+  readonly operation: string;
+  readonly opponent: string;
+  readonly motion: MotionTokens;
+  readonly reducedMotion: boolean;
+  readonly confirmShot: boolean;
+  readonly compact: boolean;
+  readonly showBlocked: boolean;
+  readonly effects: BattleEffects;
   readonly onFire: (coord: Coord) => void;
   readonly onLeave: () => void;
+  /** Called once the final shot has played and the victory/defeat banner is over. */
+  readonly onFinished: () => void;
 }
 
-function cellsOf(placements: readonly Placement[], fleet: readonly ShipSpec[]): Set<string> {
-  const keys = new Set<string>();
-  for (const placement of placements) {
-    const length = fleet.find((ship) => ship.id === placement.shipId)?.length ?? 0;
-    for (const cell of shipCells(placement, length)) keys.add(coordKey(cell));
-  }
-  return keys;
+const lengthOf = (fleet: readonly ShipSpec[], shipId: string) =>
+  fleet.find((ship) => ship.id === shipId)?.length ?? 0;
+
+function cellCenter(board: "radar" | "deck", coord: Coord): { x: number; y: number } | null {
+  const element = document.querySelector(
+    `[data-board="${board}"] [data-coord="${coord.col}:${coord.row}"]`,
+  );
+  if (!element) return null;
+  const rect = element.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
-export function logMessage(entry: LogEntry): string {
-  const coord = coordLabel(entry.coord);
-  const ship = entry.shipId ? t.ships[entry.shipId] : "";
-  if (entry.seat === 0) {
-    if (entry.result === "sunk") return t.log.ownSunk(ship, coord);
-    return entry.result === "hit" ? t.log.ownHit(coord) : t.log.ownMiss(coord);
-  }
-  if (entry.result === "sunk") return t.log.enemySunk(ship, coord);
-  return entry.result === "hit" ? t.log.enemyHit(coord) : t.log.enemyMiss(coord);
-}
+export function BattleScreen(props: BattleScreenProps) {
+  const { snapshot, effects } = props;
+  const { view, log, aiThinking, stats } = snapshot;
+  const rules = view.rules;
 
-function radarCell(view: PlayerView, sunkKeys: Set<string>) {
-  return (coord: Coord): CellView => {
+  // Latest props for timer callbacks, without re-creating the queue.
+  const latest = useRef(props);
+  latest.current = props;
+
+  const [caption, setCaption] = useState<{ id: number; text: string } | null>(null);
+  const [shake, setShake] = useState(0);
+  const [banner, setBanner] = useState<string | null>(null);
+  const [tab, setTab] = useState<"radar" | "deck">("radar");
+  const [aim, setAim] = useState<Coord | null>(null);
+  const [pointer, setPointer] = useState<Coord | null>(null);
+  const [finale, setFinale] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+
+  const onPhaseRef = useRef<(entry: LogEntry, phase: ShotPhase) => void>(() => {});
+  const [queue] = useState(
+    () =>
+      new ShotQueue({
+        motion: () => latest.current.motion,
+        onPhase: (entry, phase) => onPhaseRef.current(entry, phase),
+      }),
+  );
+  const presented = useSyncExternalStore(queue.subscribe, queue.getSnapshot);
+
+  const sound = (id: SfxId) => {
+    latest.current.effects.play(id);
+    if (id === "click") return;
+    setCaption((previous) => ({ id: (previous?.id ?? 0) + 1, text: t.captions[id] }));
+  };
+
+  onPhaseRef.current = (entry, phase) => {
+    const board = entry.seat === 0 ? "radar" : "deck";
+    if (phase === "fire") {
+      sound("fire");
+      if (!latest.current.reducedMotion) setShake((n) => n + 1);
+    } else if (phase === "suspense") {
+      sound("whistle");
+    } else if (phase === "impact") {
+      sound(entry.result === "miss" ? "miss" : "hit");
+      const center = cellCenter(board, entry.coord);
+      if (center) {
+        const kind = entry.result === "miss" ? "miss" : "hit";
+        for (const burst of burstPreset(kind, center.x, center.y)) fxBus.emit(burst);
+      }
+      if (entry.seat === 1 && entry.result !== "miss")
+        latest.current.effects.vibrate("hitReceived");
+    } else if (phase === "sunk") {
+      sound("sunk");
+      const center = cellCenter(board, entry.coord);
+      if (center) for (const burst of burstPreset("sunk", center.x, center.y)) fxBus.emit(burst);
+      if (entry.seat === 1) latest.current.effects.vibrate("ownSunk");
+      setBanner(commsLine(entry));
+    } else if (phase === "done" && latest.current.compact) {
+      // Mobile: watch your fleet during the enemy turn, back to the radar for yours.
+      setTab(entry.seat === 0 ? "deck" : "radar");
+    }
+  };
+
+  useEffect(() => {
+    queue.sync(log);
+  }, [queue, log]);
+  useEffect(() => () => queue.dispose(), [queue]);
+
+  // Abandoning ends the battle at once: present everything without waiting.
+  const forfeited =
+    view.phase === "finished" &&
+    view.winner !== view.you &&
+    view.ownSunk.length < rules.fleet.length;
+  useEffect(() => {
+    if (forfeited) queue.skipAll();
+  }, [queue, forfeited]);
+
+  useEffect(() => {
+    if (!banner) return;
+    const id = setTimeout(() => setBanner(null), 2200);
+    return () => clearTimeout(id);
+  }, [banner]);
+
+  useEffect(() => {
+    if (!caption) return;
+    const id = setTimeout(() => setCaption(null), 1800);
+    return () => clearTimeout(id);
+  }, [caption]);
+
+  // Presentation of both boards: only what the sequence already revealed.
+  const radar = presentBoard({
+    log,
+    seat: 0,
+    impacted: presented.impacted,
+    sunkRevealed: presented.sunkRevealed,
+    sunkPlacements: view.opponent.sunkShips,
+    rules,
+    showBlocked: props.showBlocked,
+  });
+  const ownFleet = view.ownFleet ?? [];
+  const deck = presentBoard({
+    log,
+    seat: 1,
+    impacted: presented.impacted,
+    sunkRevealed: presented.sunkRevealed,
+    sunkPlacements: ownFleet,
+    rules,
+    showBlocked: false,
+  });
+  const ownAfloat = rules.fleet.length - deck.sunkShips.length;
+  const enemyAfloat = rules.fleet.length - radar.sunkShips.length;
+  const streak = currentStreak(log, presented.impacted);
+  const finished = view.phase === "finished" && !presented.busy;
+  const myTurn =
+    view.phase === "battle" && view.turn === view.you && !aiThinking && !presented.busy;
+
+  useEffect(() => {
+    effects.setIntensity(musicIntensity({ ownAfloat, enemyAfloat, streak }));
+  }, [effects, ownAfloat, enemyAfloat, streak]);
+
+  // Turn alert when control comes back to the player.
+  const wasMyTurn = useRef(myTurn);
+  useEffect(() => {
+    if (myTurn && !wasMyTurn.current && presented.impacted > 0) sound("turn");
+    wasMyTurn.current = myTurn;
+  });
+
+  useEffect(() => {
+    if (!finished || finale) return;
+    const won = view.winner === view.you;
+    setFinale(true);
+    sound(won ? "victory" : "defeat");
+    if (won) latest.current.effects.vibrate("victory");
+  });
+  useEffect(() => {
+    if (!finale) return;
+    const id = setTimeout(() => latest.current.onFinished(), latest.current.motion.finaleMs);
+    return () => clearTimeout(id);
+  }, [finale]);
+
+  const fire = (coord: Coord) => {
+    if (!myTurn) return;
+    if (radar.marks.has(coordKey(coord))) return;
+    if (props.confirmShot && (aim === null || !sameCoord(aim, coord))) {
+      setAim(coord);
+      sound("lock");
+      return;
+    }
+    setAim(null);
+    sound("lock");
+    props.onFire(coord);
+  };
+
+  const cellsOf = (ships: readonly Placement[]) => {
+    const keys = new Set<string>();
+    for (const ship of ships) {
+      for (const cell of shipCells(ship, lengthOf(rules.fleet, ship.shipId))) {
+        keys.add(coordKey(cell));
+      }
+    }
+    return keys;
+  };
+  const radarSunk = cellsOf(radar.sunkShips);
+  const deckSunk = cellsOf(deck.sunkShips);
+  const ownShipCells = cellsOf(ownFleet);
+
+  const radarCell = (coord: Coord): CellView => {
     const key = coordKey(coord);
-    if (sunkKeys.has(key)) return { kind: "sunk", label: t.cell.sunk };
-    const mark = view.opponent.shots[key];
-    if (mark === "hit") return { kind: "hit", label: t.cell.hit };
-    if (mark === "miss") return { kind: "miss", label: t.cell.miss };
+    if (radarSunk.has(key)) return { kind: "sunk", label: t.cell.sunk };
+    const mark = radar.marks.get(key);
+    if (mark) return { kind: mark, label: t.cell[mark] };
+    if (radar.blocked.has(key)) return { kind: "blocked", label: t.cell.blocked };
     return { kind: "empty", label: t.cell.empty };
   };
-}
-
-function deckCell(view: PlayerView, shipKeys: Set<string>, sunkKeys: Set<string>) {
-  return (coord: Coord): CellView => {
+  const deckCell = (coord: Coord): CellView => {
     const key = coordKey(coord);
-    if (sunkKeys.has(key)) return { kind: "sunk", label: t.cell.sunk };
-    const mark = view.ownShotsReceived[key];
-    if (mark === "hit") return { kind: "hit", label: t.cell.hit };
-    if (mark === "miss") return { kind: "miss", label: t.cell.miss };
-    return shipKeys.has(key)
-      ? { kind: "ship", label: t.cell.ship }
+    if (deckSunk.has(key)) return { kind: "sunk", label: t.cell.sunk };
+    const mark = deck.marks.get(key);
+    if (mark) return { kind: mark, label: t.cell[mark] };
+    return ownShipCells.has(key)
+      ? { kind: "empty", label: t.cell.ship }
       : { kind: "empty", label: t.cell.water };
   };
-}
 
-export function BattleScreen({ snapshot, onFire, onLeave }: BattleScreenProps) {
-  const { view, log, aiThinking } = snapshot;
-  const [confirming, setConfirming] = useState(false);
-  const rules = view.rules;
-  const ownFleet = view.ownFleet ?? [];
-  const ownShipKeys = cellsOf(ownFleet, rules.fleet);
-  const ownSunkKeys = cellsOf(
-    ownFleet.filter((p) => view.ownSunk.some((ship) => ship.id === p.shipId)),
-    rules.fleet,
-  );
-  const enemySunkKeys = cellsOf(view.opponent.sunkShips, rules.fleet);
-  const myTurn = view.phase === "battle" && view.turn === view.you && !aiThinking;
-  const lastEntry = log.at(-1);
+  const deckShips: BoardShip[] = ownFleet.map((placement) => {
+    const length = lengthOf(rules.fleet, placement.shipId);
+    const sunk = deck.sunkShips.some((p) => p.shipId === placement.shipId);
+    const damaged = shipCells(placement, length).some((cell) => deck.marks.has(coordKey(cell)));
+    return { placement, length, state: sunk ? "sunk" : damaged ? "damaged" : "intact" };
+  });
+  const radarShips: BoardShip[] = radar.sunkShips.map((placement) => ({
+    placement,
+    length: lengthOf(rules.fleet, placement.shipId),
+    state: "sunk",
+  }));
 
-  const ownStatus = rules.fleet.map((ship) => {
-    const placement = ownFleet.find((p) => p.shipId === ship.id);
-    const sunk = view.ownSunk.some((s) => s.id === ship.id);
-    const damaged =
-      placement !== undefined &&
-      shipCells(placement, ship.length).some(
-        (cell) => view.ownShotsReceived[coordKey(cell)] === "hit",
-      );
-    return { ship, state: sunk ? "sunk" : damaged ? "damaged" : "intact" } as const;
-  });
-  const enemyStatus = rules.fleet.map((ship) => {
-    const sunk = view.opponent.sunkShips.some((p) => p.shipId === ship.id);
-    return { ship, state: sunk ? "sunk" : "unconfirmed" } as const;
-  });
+  const active = presented.active;
+  const incoming = active && active.phase === "suspense" ? active.entry : null;
+  const won = view.winner === view.you;
+  let turnText: string;
+  if (finale) turnText = won ? t.finale.victory : t.finale.defeat;
+  else if (active) turnText = active.entry.seat === 0 ? t.battle.shotInFlight : t.battle.incoming;
+  else if (aiThinking) turnText = t.battle.aiThinking;
+  else if (myTurn) turnText = aim ? t.battle.confirmHint : t.battle.yourTurn;
+  else turnText = t.battle.enemyTurn;
+
+  const revealed = log.slice(0, presented.impacted);
+  const lastRevealed = revealed.at(-1);
+  let alert: string | null = null;
+  if (enemyAfloat === 1) alert = t.battle.lastShipEnemy;
+  else if (ownAfloat === 1) alert = t.battle.lastShipOwn;
+  const showRadar = !props.compact || tab === "radar";
+  const showDeck = !props.compact || tab === "deck";
 
   return (
-    <main className="screen battle">
-      <div className={`turn${myTurn ? "" : " turn--enemy"}`} role="status">
-        <span className="turn__dot" aria-hidden="true" />
-        {myTurn ? t.battle.yourTurn : aiThinking ? t.battle.aiThinking : t.battle.enemyTurn}
-      </div>
+    <main className={`screen battle${finale ? " battle--finale" : ""}`}>
+      <header className="battle__header panel">
+        <div>
+          <p className="label">{props.operation}</p>
+          <p className="battle__opponent">{t.battle.versus(props.opponent)}</p>
+        </div>
+        <div className={`turn${myTurn ? "" : " turn--enemy"}`} role="status">
+          <span className="turn__dot" aria-hidden="true" />
+          {turnText}
+        </div>
+        <dl className="battle__stats">
+          <div>
+            <dt className="label">{t.battle.shots}</dt>
+            <dd className="num">{stats.shots}</dd>
+          </div>
+          <div>
+            <dt className="label">{t.battle.accuracy}</dt>
+            <dd className="num">{Math.round(stats.accuracy * 100)}%</dd>
+          </div>
+        </dl>
+      </header>
+
+      {props.compact && (
+        <div className="viewswitch" role="tablist" aria-label={t.battle.viewSwitch}>
+          {(["radar", "deck"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              className={tab === key ? "is-active" : ""}
+              onClick={() => setTab(key)}
+            >
+              {key === "radar" ? t.battle.tabRadar : t.battle.tabDeck}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="battle__layout">
         <FleetPanel
-          title={`${t.battle.ownFleet} · ${rules.fleet.length - view.ownSunk.length}/${rules.fleet.length} ${t.battle.afloat}`}
-          items={ownStatus}
+          className="battle__own-fleet"
+          title={`${t.battle.ownFleet} · ${ownAfloat}/${rules.fleet.length} ${t.battle.afloat}`}
+          items={rules.fleet.map((ship) => ({
+            ship,
+            state: deckShips.find((s) => s.placement.shipId === ship.id)?.state ?? "intact",
+          }))}
         />
 
         <div className="battle__boards">
-          <section aria-labelledby="radar-title">
-            <h2 id="radar-title" className="board-title">
-              {t.battle.radar}
-            </h2>
-            <Board
-              size={rules.boardSize}
-              label={t.battle.radar}
-              variant="radar"
-              cellAt={radarCell(view, enemySunkKeys)}
-              onActivate={onFire}
-              locked={!myTurn}
-            />
-          </section>
-          <section aria-labelledby="deck-title">
-            <h2 id="deck-title" className="board-title">
-              {t.battle.deck}
-            </h2>
-            <Board
-              size={rules.boardSize}
-              label={t.battle.deck}
-              variant="deck"
-              cellAt={deckCell(view, ownShipKeys, ownSunkKeys)}
-            />
-          </section>
+          {showRadar && (
+            <section className="board-wrap" data-board="radar" aria-labelledby="radar-title">
+              <h2 id="radar-title" className="board-title">
+                {t.battle.radar}
+              </h2>
+              <Board
+                size={rules.boardSize}
+                label={t.battle.radar}
+                variant="radar"
+                cellAt={radarCell}
+                ships={radarShips}
+                aim={aim ?? (myTurn ? pointer : null)}
+                incoming={incoming?.seat === 0 ? incoming.coord : null}
+                onActivate={fire}
+                onPoint={setPointer}
+                locked={!myTurn}
+              />
+            </section>
+          )}
+          {showDeck && (
+            <section
+              key={shake}
+              className={`board-wrap${shake > 0 ? " is-shaking" : ""}`}
+              data-board="deck"
+              aria-labelledby="deck-title"
+            >
+              <h2 id="deck-title" className="board-title">
+                {t.battle.deck}
+              </h2>
+              <Board
+                size={rules.boardSize}
+                label={t.battle.deck}
+                variant="deck"
+                cellAt={deckCell}
+                ships={deckShips}
+                incoming={incoming?.seat === 1 ? incoming.coord : null}
+              />
+            </section>
+          )}
         </div>
 
         <div className="battle__side">
           <FleetPanel
-            title={`${t.battle.enemyFleet} · ${view.opponent.remainingShips.length}/${rules.fleet.length} ${t.battle.afloat}`}
-            items={enemyStatus}
+            title={`${t.battle.enemyFleet} · ${enemyAfloat}/${rules.fleet.length} ${t.battle.afloat}`}
+            items={rules.fleet.map((ship) => ({
+              ship,
+              state: radar.sunkShips.some((p) => p.shipId === ship.id) ? "sunk" : "unconfirmed",
+            }))}
           />
           <section className="panel" aria-labelledby="log-title">
             <h2 id="log-title" className="label">
               {t.battle.log}
             </h2>
+            {streak >= 3 && (
+              <p className="streak" key={streak}>
+                ▲ {t.battle.streak(streak)}
+              </p>
+            )}
             <ol className="log">
-              {log
+              {revealed
                 .slice(-10)
                 .reverse()
                 .map((entry) => (
@@ -149,31 +383,47 @@ export function BattleScreen({ snapshot, onFire, onLeave }: BattleScreenProps) {
                     key={entry.id}
                     className={`log__entry log__entry--${entry.result} log__entry--seat${entry.seat}`}
                   >
-                    {logMessage(entry)}
+                    {commsLine(entry)}
                   </li>
                 ))}
             </ol>
           </section>
-          {confirming ? (
-            <div className="confirm" role="alertdialog" aria-label={t.battle.confirmLeave}>
+          {confirmingLeave ? (
+            <div className="confirm panel" role="alertdialog" aria-label={t.battle.confirmLeave}>
               <p>{t.battle.confirmLeave}</p>
-              <button type="button" onClick={onLeave}>
+              <button type="button" onClick={props.onLeave}>
                 {t.battle.confirmYes}
               </button>
-              <button type="button" onClick={() => setConfirming(false)}>
+              <button type="button" onClick={() => setConfirmingLeave(false)}>
                 {t.battle.confirmNo}
               </button>
             </div>
           ) : (
-            <button type="button" className="ghost" onClick={() => setConfirming(true)}>
+            <button type="button" className="ghost" onClick={() => setConfirmingLeave(true)}>
               {t.battle.leave}
             </button>
           )}
         </div>
       </div>
 
+      {alert && !finale && (
+        <p className="alert" role="note">
+          {alert}
+        </p>
+      )}
+      {banner && <p className="banner">{banner}</p>}
+      {caption && (
+        <p className="caption" key={caption.id} aria-hidden="true">
+          [{caption.text}]
+        </p>
+      )}
+      {finale && (
+        <div className={`finale${won ? " finale--victory" : ""}`}>
+          <p>{won ? t.finale.victory : t.finale.defeat}</p>
+        </div>
+      )}
       <p className="sr-only" aria-live="assertive">
-        {lastEntry ? logMessage(lastEntry) : ""}
+        {lastRevealed ? commsLine(lastRevealed) : ""}
       </p>
     </main>
   );
@@ -184,9 +434,11 @@ type FleetState = "intact" | "damaged" | "sunk" | "unconfirmed";
 function FleetPanel({
   title,
   items,
+  className,
 }: {
   readonly title: string;
   readonly items: readonly { ship: ShipSpec; state: FleetState }[];
+  readonly className?: string;
 }) {
   const labels: Record<FleetState, string> = {
     intact: t.battle.intact,
@@ -195,7 +447,7 @@ function FleetPanel({
     unconfirmed: t.battle.unconfirmed,
   };
   return (
-    <section className="panel fleet">
+    <section className={["panel fleet", className].filter(Boolean).join(" ")}>
       <h2 className="label">{title}</h2>
       <ul>
         {items.map(({ ship, state }) => (
