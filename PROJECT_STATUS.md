@@ -1,14 +1,14 @@
 # PROJECT_STATUS — Battleships: Naval Warfare
 
-**Fase actual: 2 (Identidad e inmersión) — entregada, esperando aprobación.** La batalla contra la IA Fácil ya tiene la identidad final: océano animado, radar con barrido, siluetas, secuencia de disparo, audio procedural, hápticos, narrativa y diseño responsive.
+**Fase actual: 3 (IA) — entregada, esperando aprobación.** Hay tres dificultades jugables con comandante propio (Alférez Ruiz, Capitán Varela, Almirante Castellanos), selección recordada y métricas reales de 1.000 partidas por dificultad en `docs/AI_METRICS.md`.
 
 ## Retomar en otra sesión
 
-1. Leer este archivo, `docs/PLAN.md` y la bitácora de la fase en `odd/tasks/phase-2-identity.md` (la Fase 1 está en `odd/tasks/phase-1-core.md`).
+1. Leer este archivo, `docs/PLAN.md` y la bitácora de la fase en `odd/tasks/phase-3-ai.md` (fases anteriores en `odd/tasks/`).
 2. `pnpm install`, `pnpm test`, `pnpm dev`.
-3. Si la Fase 2 está aprobada, empezar la Fase 3 (IA Normal y Difícil, comandantes, simulación) según `docs/PLAN.md` §7 y §11.
+3. Si la Fase 3 está aprobada, empezar la Fase 4 (servidor, salas, protocolo, reconexión, revancha) según `docs/PLAN.md` §6 y §11.
 
-Ramas: `feat/phase-1-core` → `feat/phase-2-identity` (apilada). No hay push ni PR.
+Ramas apiladas: `feat/phase-1-core` → `feat/phase-2-identity` → `feat/phase-3-ai`. No hay push ni PR.
 
 ## Comandos
 
@@ -20,6 +20,7 @@ Ramas: `feat/phase-1-core` → `feat/phase-2-identity` (apilada). No hay push ni
 | `pnpm typecheck` | TypeScript estricto en todos los paquetes |
 | `pnpm lint` | Biome (lint + formato) |
 | `pnpm build` | Build de producción del cliente |
+| `pnpm simulate` | 1.000 partidas por dificultad; reescribe `docs/AI_METRICS.md` (admite `--games N`) |
 
 ## Objetivo
 
@@ -52,7 +53,9 @@ Juego de batalla naval para navegador, completo y real: modo contra IA (tres dif
 | Hecho (F2) | Nombres de operación y frases del oficial de comunicaciones con variaciones; subtítulos visuales para cada sonido |
 | Hecho (F2) | Despliegue con arrastrar y soltar (ratón y táctil) y doble toque para girar |
 | Hecho (F2) | Responsive: escritorio y tablet con los tableros lado a lado; móvil con selector Radar / Mi flota y cambio automático de tablero |
-| Pendiente (F3) | IA Normal y Difícil, comandantes con insignia, simulación de 1.000 partidas |
+| Hecho (F3) | IA Normal (damero + objetivo + línea) y Difícil (mapa de densidad con regla de no contacto), colocación según dificultad |
+| Hecho (F3) | Selección de dificultad con tres comandantes e insignias, última usada recordada, comentarios del comandante desactivables, velocidad de la IA configurable |
+| Hecho (F3) | Simulación: Fácil 95,51 · Normal 52,62 · Difícil 38,48 disparos de media (1.000 partidas cada una) |
 | Pendiente (F4–F6) | Servidor y multijugador, progresión y desafíos, tutorial, estadísticas, accesibilidad completa, despliegue |
 
 ## Pruebas y resultados
@@ -60,8 +63,8 @@ Juego de batalla naval para navegador, completo y real: modo contra IA (tres dif
 `pnpm test` (exit 0):
 
 ```text
-Test Files  21 passed (21)
-     Tests  165 passed (165)
+Test Files  26 passed (26)
+     Tests  221 passed (221)
 ```
 
 Nuevas en la Fase 2: motor de audio (34), océano y partículas (38), cola de disparos y tiempos (8), narrativa (4), ajustes persistidos (8), presentación de tableros (5), hápticos (2) y pruebas de la App (arranque, secuencia y bloqueo de entrada, confirmación de disparo, ajustes persistidos y partida completa).
@@ -75,6 +78,9 @@ Otras verificaciones:
 
 ## Errores conocidos y desviaciones
 
+- La IA Normal promedia 52,62 disparos, 2,4 por debajo del rango orientativo 55–65; está implementada tal como la describe la especificación (ver `docs/AI_METRICS.md`).
+- Corregido en la Fase 3: la pantalla de arranque no avanzaba si el navegador dejaba `AudioContext.resume()` pendiente.
+
 - No verifiqué el audio a oído (solo pruebas unitarias con un AudioContext falso), la vibración en un dispositivo real, la confirmación de disparo en una pantalla táctil real ni la consola del navegador durante la partida automática.
 - A 360 px con una barra de desplazamiento de escritorio quedan 8 px de desborde; en teléfonos (barras superpuestas) entra.
 - La racha no tiene sonido propio: la música sube de intensidad y el indicador se anima.
@@ -85,6 +91,7 @@ Otras verificaciones:
 
 - Fase 0 aprobada el 2026-11-04: plan, stack y dirección de arte del prototipo.
 - Fase 1 aprobada el 2026-11-04.
+- Fase 2 aprobada el 2026-11-04 (continuar solo con la fase anterior terminada).
 
 ## Supuestos
 
@@ -96,5 +103,5 @@ Otras verificaciones:
 
 ## Próximos pasos
 
-1. Aprobación de la Fase 2.
-2. Fase 3: IA Normal (caza en ajedrez + objetivo) y Difícil (mapa de densidad), colocación estratégica, comandantes con nombre e insignia, selección de dificultad recordada y `scripts/simulate-ai.ts` con 1.000 partidas por dificultad.
+1. Aprobación de la Fase 3 y decisión sobre la IA Normal (dejarla así o debilitarla para entrar en 55–65).
+2. Fase 4: `apps/server` con Socket.IO, salas con código, protocolo con Zod, `viewFor`, reconexión, temporizador, revancha, reacciones y E2E con dos navegadores.
