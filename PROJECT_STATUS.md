@@ -1,12 +1,14 @@
 # PROJECT_STATUS — Battleships: Naval Warfare
 
-**Fase actual: 1 (Núcleo jugable) — entregada, esperando aprobación.** Se juega una partida completa contra la IA Fácil con una interfaz sencilla y pasan todas las pruebas de dominio.
+**Fase actual: 2 (Identidad e inmersión) — entregada, esperando aprobación.** La batalla contra la IA Fácil ya tiene la identidad final: océano animado, radar con barrido, siluetas, secuencia de disparo, audio procedural, hápticos, narrativa y diseño responsive.
 
 ## Retomar en otra sesión
 
-1. Leer este archivo, `docs/PLAN.md` y `odd/tasks/phase-1-core.md` (especificaciones, tareas, commits y bitácora de la fase).
-2. `pnpm install`, luego `pnpm test` y `pnpm dev`.
-3. Si la Fase 1 está aprobada, empezar la Fase 2 (identidad e inmersión) según `docs/PLAN.md` §11.
+1. Leer este archivo, `docs/PLAN.md` y la bitácora de la fase en `odd/tasks/phase-2-identity.md` (la Fase 1 está en `odd/tasks/phase-1-core.md`).
+2. `pnpm install`, `pnpm test`, `pnpm dev`.
+3. Si la Fase 2 está aprobada, empezar la Fase 3 (IA Normal y Difícil, comandantes, simulación) según `docs/PLAN.md` §7 y §11.
+
+Ramas: `feat/phase-1-core` → `feat/phase-2-identity` (apilada). No hay push ni PR.
 
 ## Comandos
 
@@ -28,77 +30,71 @@ Juego de batalla naval para navegador, completo y real: modo contra IA (tres dif
 | Tema | Decisión |
 |---|---|
 | Estructura | Monorepo pnpm: `packages/shared` (dominio puro) y `apps/client`. `apps/server` y `e2e` llegan en las Fases 4 y 5 |
-| Dominio | `reduce(state, action)` puro: `lobby → placement → battle → finished (→ placement por revancha)`, errores tipados, eventos |
-| Pureza del dominio | `shared` compila sin `DOM` en `lib` y Biome prohíbe importar React o Socket.IO (`noRestrictedImports`) |
-| Aleatoriedad | Mulberry32 con semilla inyectable (`createRng`); el dominio nunca usa `Math.random` |
-| Información oculta | La IA solo recibe `publicBoardView` (congelada en profundidad); `viewFor(seat)` es la única salida de estado hacia un jugador |
-| Cliente | `LocalAiGame` corre la máquina en el navegador; React lo lee con `useSyncExternalStore` |
-| Versiones | Semver más alta con al menos 14 días: react 19.3.1, vite 8.3.5, typescript 6.0.3, zod 4.6.7, vitest 5.0.5, fast-check 4.10.2, biome 2.6.2 |
+| Dominio | `reduce(state, action)` puro con eventos y errores tipados; RNG con semilla; la IA solo ve `publicBoardView` |
+| Presentación | El estado de la partida se resuelve al instante; `ShotQueue` decide cuándo cada resultado se ve, suena y se anuncia |
+| Tokens | Colores, tipografía, espaciado, capas y curvas en `theme/tokens.css`; duraciones en `theme/motion.ts`, volcadas a variables `--dur-*` |
+| Secuencia de disparo | Fuego 0–150 ms, suspense 150–450, impacto 450–700, pausa de 300 ms antes de revelar un hundido; con movimiento reducido menos de 200 ms |
+| Audio | Web Audio procedural sin archivos (`audio/`): 11 efectos, música en 4 capas con fundidos, ambiente opcional; se activa con "Pulsa para comenzar" |
+| Efectos | Océano en Canvas 2D (pausa con la pestaña oculta, calidad adaptativa) y partículas en pool de 150 (`fx/`) |
+| Persistencia | `localStorage` con esquema versionado, migraciones y recuperación campo a campo (`settings/settingsStore.ts`) |
+| Fuentes | Chakra Petch e IBM Plex Sans autoalojadas con Fontsource (OFL) |
+| Versiones | Semver más alta con al menos 14 días: react 19.3.1, vite 8.3.5, typescript 6.0.3, zod 4.6.7, vitest 5.0.5, fast-check 4.10.2, biome 2.6.2, @fontsource 5.3.0 |
 
 ## Funcionalidades
 
 | Estado | Elemento |
 |---|---|
-| Hecho | `GameRules` validado con Zod (10×10, flota de 17 casillas, no contacto, temporizador, turno extra opcional desactivado) |
-| Hecho | Colocación: límites, superposición, no contacto (lados y esquinas), colocación aleatoria válida |
-| Hecho | Máquina de estados con disparos, impacto, fallo, hundimiento, victoria, abandono y revancha |
-| Hecho | IA Fácil: aleatoria sin repetir, colocación aleatoria, retardo de 400–900 ms con indicador |
-| Hecho | Despliegue: selección, proa, girar (R o botón), devolver al muelle, aleatorio, reiniciar, fantasma con motivo, teclado |
-| Hecho | Batalla: radar y cubierta, turno bloqueado, registro, estado de flotas, región `aria-live`, abandonar con confirmación |
-| Hecho | Resultados: victoria o derrota, disparos, precisión, racha máxima, primer hundimiento, duración y mapas finales revelados |
-| Pendiente (Fase 2) | Identidad visual final, océano, siluetas SVG, secuencia de disparo, audio, hápticos, menú completo, móvil con selector Radar / Mi flota |
-| Pendiente (Fase 3) | IA Normal y Difícil, comandantes, simulación de 1.000 partidas |
-| Pendiente (Fases 4–6) | Servidor, multijugador, progresión, tutorial, accesibilidad completa, despliegue |
+| Hecho (F1) | Reglas, colocación, máquina de estados, IA Fácil, despliegue, batalla y resultados |
+| Hecho (F2) | Arranque, menú y configuración (audio, silencio, ambiente, vibración, movimiento, sombreado de casillas descartadas, confirmación de disparo) |
+| Hecho (F2) | Tableros finales: cubierta con siluetas SVG (intacto, dañado con fuego y humo, hundido) y radar con barrido que solo muestra lo descubierto |
+| Hecho (F2) | Secuencia de disparo con retícula y coordenada, sacudida, proyectil, partículas, sonido, registro narrado y anuncio accesible |
+| Hecho (F2) | Hundimiento con pausa, revelado, sonido, vibración y mensaje destacado; alerta de último barco; racha ×3; final de victoria o derrota |
+| Hecho (F2) | Nombres de operación y frases del oficial de comunicaciones con variaciones; subtítulos visuales para cada sonido |
+| Hecho (F2) | Despliegue con arrastrar y soltar (ratón y táctil) y doble toque para girar |
+| Hecho (F2) | Responsive: escritorio y tablet con los tableros lado a lado; móvil con selector Radar / Mi flota y cambio automático de tablero |
+| Pendiente (F3) | IA Normal y Difícil, comandantes con insignia, simulación de 1.000 partidas |
+| Pendiente (F4–F6) | Servidor y multijugador, progresión y desafíos, tutorial, estadísticas, accesibilidad completa, despliegue |
 
 ## Pruebas y resultados
 
-`pnpm test` (última corrida, 3 veces seguidas sin fallos):
+`pnpm test` (exit 0):
 
 ```text
-Test Files  9 passed (9)
-     Tests  64 passed (64)
+Test Files  21 passed (21)
+     Tests  165 passed (165)
 ```
 
-| Archivo | Cubre |
-|---|---|
-| `shared/src/rules/rules.test.ts` | Reglas por defecto y rechazo de reglas inválidas |
-| `shared/src/random/rng.test.ts` | Determinismo y rango del RNG |
-| `shared/src/board/placement.test.ts` | Límites, superposición, contacto en lados y esquinas, flota completa; propiedades: toda flota aleatoria es válida (500 corridas) y `validPlacementsFor` ≡ `validatePlacement` |
-| `shared/src/game/game.test.ts` | Transiciones, acciones fuera de fase o de turno, disparo repetido, hundimiento, victoria, turno extra, abandono, revancha, inmutabilidad |
-| `shared/src/game/view.test.ts` | La vista pública solo expone disparos, hundidos y barcos restantes; congelada |
-| `shared/src/ai/ai.test.ts` | Fácil nunca repite; flota válida; con flotas ocultas distintas elige lo mismo (no ve información oculta) |
-| `client/src/deploy/deployModel.test.ts` | Despliegue: colocar, girar, motivo de rechazo, fantasma, devolver al muelle, aleatorio |
-| `client/src/adapters/localAiGame.test.ts` | Retardo de 400–900 ms, bloqueo del jugador, partida completa, estadísticas, flota revelada al final |
-| `client/src/app/App.test.tsx` | Partida completa a través de la UI, bloqueo durante el turno rival, motivo de colocación inválida |
+Nuevas en la Fase 2: motor de audio (34), océano y partículas (38), cola de disparos y tiempos (8), narrativa (4), ajustes persistidos (8), presentación de tableros (5), hápticos (2) y pruebas de la App (arranque, secuencia y bloqueo de entrada, confirmación de disparo, ajustes persistidos y partida completa).
 
 Otras verificaciones:
 
 - `pnpm typecheck` y `pnpm lint`: sin errores.
-- `pnpm build`: JS inicial de 96,39 kB gzip (presupuesto: 300 kB).
-- Navegador real (Chrome, build de producción): despliegue, fantasma inválido con motivo, despliegue aleatorio, batalla y disparo con respuesta de la IA.
+- `pnpm build`: JS inicial de 111,55 kB gzip (presupuesto: 300 kB).
+- Chrome real con build de producción: partida completa automatizada hasta resultados, a 59 fps de media con 16 de 1.200 fotogramas por encima de 33 ms.
+- Móvil medido en un iframe: casillas de 32 px a 360 y 375 px, 35,8 px a 414 px y tablet a 800 px con los dos tableros. Sin desborde a 375 px.
 
-## Errores conocidos
+## Errores conocidos y desviaciones
 
-- Corregido en esta fase: la prueba de propiedades de `randomFleet` superaba los 5 s con la suite en paralelo (df5b953).
-- Corregido en esta fase: en escritorios de ~1500 px los tableros se apilaban.
-- La interfaz es funcional, no la final: sin océano, siluetas, animaciones ni audio (Fase 2).
-- En móvil los tableros se apilan; el selector Radar / Mi flota llega en la Fase 2.
-- Las fuentes Chakra Petch e IBM Plex Sans no están cargadas todavía (usan fuentes del sistema); se autoalojan en la Fase 2.
+- No verifiqué el audio a oído (solo pruebas unitarias con un AudioContext falso), la vibración en un dispositivo real, la confirmación de disparo en una pantalla táctil real ni la consola del navegador durante la partida automática.
+- A 360 px con una barra de desplazamiento de escritorio quedan 8 px de desborde; en teléfonos (barras superpuestas) entra.
+- La racha no tiene sonido propio: la música sube de intensidad y el indicador se anima.
+- Audio y efectos van en el bundle inicial en lugar de cargarse después (111,55 kB gzip, dentro del presupuesto).
+- `App.test.tsx` tarda unos 40 s porque juega una partida completa en jsdom.
 
 ## Decisiones aprobadas
 
 - Fase 0 aprobada el 2026-11-04: plan, stack y dirección de arte del prototipo.
+- Fase 1 aprobada el 2026-11-04.
 
-## Supuestos (preguntas de PLAN §12 sin respuesta)
+## Supuestos
 
-- Ubicación `games/battleships/` con repositorio git propio (rama `feat/phase-1-core`).
+- Ubicación `games/battleships/` con repositorio git propio.
 - TypeScript 6.0.x en lugar de 7.0.
-- Audio 100 % procedural.
-- E2E en Chromium + WebKit.
-- Despliegue previsto en Render (a confirmar en la Fase 6).
-- Zustand no se instaló: `useSyncExternalStore` alcanza por ahora.
+- Audio 100 % procedural (documentado en `CREDITS.md`).
+- E2E en Chromium + WebKit; despliegue previsto en Render (a confirmar en la Fase 6).
+- Sin Zustand ni Motion: `useSyncExternalStore` y CSS con tokens alcanzan.
 
 ## Próximos pasos
 
-1. Aprobación de la Fase 1.
-2. Fase 2: tokens completos, fuentes autoalojadas, océano en Canvas, siluetas SVG, secuencia de disparo, audio procedural, menú, selector móvil y movimiento reducido.
+1. Aprobación de la Fase 2.
+2. Fase 3: IA Normal (caza en ajedrez + objetivo) y Difícil (mapa de densidad), colocación estratégica, comandantes con nombre e insignia, selección de dificultad recordada y `scripts/simulate-ai.ts` con 1.000 partidas por dificultad.

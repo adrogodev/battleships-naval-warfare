@@ -18,11 +18,11 @@ Objective: the battle against the AI feels like the final game. Branch: `feat/ph
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 | S6 | delegated (parallel unit A: `apps/client/src/audio/**`) | pending | |
-| T2 | S2, S4 (particles) | delegated (parallel unit B: `apps/client/src/fx/**`) | pending | |
-| T3 | S1, S3 | inline | pending | |
-| T4 | S4, S5, S7 | inline | pending | |
-| T5 | S8, S9 + integration of T1/T2 | inline | pending | |
+| T1 | S6 | delegated (parallel unit A: `apps/client/src/audio/**`) | done | 5b77afc (RED: module missing → GREEN 34 tests) |
+| T2 | S2, S4 (particles) | delegated (parallel unit B: `apps/client/src/fx/**`) | done | 2a139c5 (RED → GREEN 38 tests) |
+| T3 | S1, S3 | inline | done | e5cb4c5 |
+| T4 | S4, S5, S7 | inline | done | e5cb4c5 (shotQueue, narrative, settings: RED → GREEN) |
+| T5 | S8, S9 + integration of T1/T2 | inline | done | e5cb4c5 (App tests: boot, sequence, confirm shot, settings) |
 
 Route evidence: T1 (audio engine) and T2 (ocean + particle pool) are independent units with disjoint edit surfaces, each several files and well over 100 changed lines, so they run as parallel writers while the parent writes T3–T4 inline. T5 depends on all and stays inline.
 
@@ -31,3 +31,10 @@ Route evidence: T1 (audio engine) and T2 (ocean + particle pool) are independent
 - **L1** (2026-11-04) User: "Si, continua con la fase" — approves Phase 1 and starts Phase 2.
 - **L2** Fonts: @fontsource/chakra-petch 5.3.0 and @fontsource/ibm-plex-sans 5.3.0 (highest semver ≥14 days). They solve self-hosting without hand-managed woff2 files; alternative discarded: copying font files manually.
 - **L3** Motion library not added: shot sequence uses a token-driven sequencer and CSS animations; Motion would add bundle weight for effects CSS already covers.
+- **L4** Writers A (audio) and B (fx) ran in parallel on disjoint surfaces; parent checked both diffs stayed inside `apps/client/src/audio/**` and `apps/client/src/fx/**`. Seam check: full suite 165/165, exit 0.
+- **L5** Test-first exception: `battle/presentation.test.ts` was written together with its implementation (RED not observed). All other new modules observed RED first.
+- **L6** Real-browser check (Chrome, production preview): boot with ocean, menu, drag-and-drop of the carrier to B-2, double tap rotated it in place, ghost reason "Se superpone con otro barco", battle with radar sweep and deck silhouettes, splash particles, sunk enemy silhouette revealed in sunk colour, fire on damaged sections, captions, full automated game to the results screen. Frame timing during the battle: 59 fps average, 16 of 1200 frames over 33 ms.
+- **L7** Bugs found in the browser and fixed: own sunk ships nearly invisible on the final map (lighter sinking style); mobile overflow from `100vw` including the scrollbar (cells now sized with container units, `.screen` uses `minmax(0, 1fr)`); cells were 31.8 px on mobile (now ≥ 32 px). Mobile auto-switch observed: Radar → Mi flota → Radar.
+- **L8** Deviations: the streak has no dedicated sound (music rises to intensity 3 and the badge animates); audio and effects are in the initial bundle (111.55 kB gzip, under the 300 kB budget) instead of loaded later; `App.test.tsx` takes ~40 s because the full game renders two 100-cell boards per sequence phase in jsdom (cells are now memoised).
+- **L9** Not verified: audible output (only unit tests with a fake AudioContext), vibration on a real device, tap-to-aim confirmation on a real touch screen (verified through the "Siempre" setting), browser console during the automated game.
+- **L10** Review assessment after e5cb4c5: risk `medium`, `review_due: false` (`under_budget`).
