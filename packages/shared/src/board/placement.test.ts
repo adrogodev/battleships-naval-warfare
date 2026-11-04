@@ -9,6 +9,7 @@ import {
   shipCells,
   validateFleet,
   validatePlacement,
+  validPlacementsFor,
 } from "./placement";
 
 const rules = DEFAULT_RULES;
@@ -122,6 +123,34 @@ describe("validateFleet", () => {
       { ...(complete[4] as Placement), bow: { col: 0, row: 7 } },
     ];
     expect(validateFleet(touching, rules)).toEqual({ ok: false, reason: "contact" });
+  });
+});
+
+describe("validPlacementsFor", () => {
+  it("returns exactly the positions validatePlacement accepts (property)", () => {
+    fc.assert(
+      fc.property(
+        fc.integer(),
+        fc.boolean(),
+        fc.integer({ min: 0, max: 4 }),
+        (seed, noContact, n) => {
+          const variant: GameRules = { ...rules, noContact };
+          const placed = randomFleet(variant, createRng(seed)).slice(0, n);
+          const shipId = variant.fleet[n]?.id ?? "destroyer";
+          const expected: Placement[] = [];
+          for (const orientation of ["h", "v"] as const) {
+            for (let row = 0; row < 10; row++) {
+              for (let col = 0; col < 10; col++) {
+                const candidate: Placement = { shipId, bow: { col, row }, orientation };
+                if (validatePlacement(placed, candidate, variant).ok) expected.push(candidate);
+              }
+            }
+          }
+          expect(validPlacementsFor(placed, shipId, variant)).toEqual(expected);
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 });
 

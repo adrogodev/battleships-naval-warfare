@@ -71,21 +71,38 @@ export function validatePlacement(
     return { ok: false, reason: "duplicate_ship" };
   }
 
-  const cells = shipCells(candidate, length);
+  return checkCells(shipCells(candidate, length), blockedBy(others, rules), rules);
+}
+
+interface Blocked {
+  /** Cells taken by other ships. */
+  readonly occupied: ReadonlySet<string>;
+  /** Free cells next to another ship (sides and corners); empty when no-contact is off. */
+  readonly touching: ReadonlySet<string>;
+}
+
+/** Precomputes what the placed ships forbid, so many candidates can be checked cheaply. */
+function blockedBy(others: readonly Placement[], rules: GameRules): Blocked {
+  const occupied = new Set(occupiedCells(others, rules).keys());
+  const touching = new Set<string>();
+  if (rules.noContact) {
+    for (const placement of others) {
+      const length = shipLength(rules, placement.shipId) ?? 0;
+      for (const cell of shipCells(placement, length)) {
+        for (const n of neighbours(cell, rules.boardSize)) touching.add(coordKey(n));
+      }
+    }
+  }
+  return { occupied, touching };
+}
+
+function checkCells(cells: readonly Coord[], blocked: Blocked, rules: GameRules): PlacementCheck {
   if (!cells.every((cell) => isInBounds(cell, rules.boardSize))) {
     return { ok: false, reason: "out_of_bounds" };
   }
-
-  const occupied = occupiedCells(others, rules);
-  if (cells.some((cell) => occupied.has(coordKey(cell)))) return { ok: false, reason: "overlap" };
-
-  if (rules.noContact) {
-    const touches = cells.some((cell) =>
-      neighbours(cell, rules.boardSize).some((n) => occupied.has(coordKey(n))),
-    );
-    if (touches) return { ok: false, reason: "contact" };
-  }
-
+  const keys = cells.map(coordKey);
+  if (keys.some((key) => blocked.occupied.has(key))) return { ok: false, reason: "overlap" };
+  if (keys.some((key) => blocked.touching.has(key))) return { ok: false, reason: "contact" };
   return { ok: true };
 }
 
@@ -109,12 +126,16 @@ export function validPlacementsFor(
   shipId: ShipId,
   rules: GameRules,
 ): Placement[] {
+  const length = shipLength(rules, shipId);
+  // Same outcome as validatePlacement for an unknown or already placed ship: no option.
+  if (length === undefined || placed.some((p) => p.shipId === shipId)) return [];
+  const blocked = blockedBy(placed, rules);
   const options: Placement[] = [];
   for (const orientation of ["h", "v"] as const) {
     for (let row = 0; row < rules.boardSize; row++) {
       for (let col = 0; col < rules.boardSize; col++) {
         const candidate: Placement = { shipId, bow: { col, row }, orientation };
-        if (validatePlacement(placed, candidate, rules).ok) options.push(candidate);
+        if (checkCells(shipCells(candidate, length), blocked, rules).ok) options.push(candidate);
       }
     }
   }
