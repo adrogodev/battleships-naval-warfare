@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "../random/rng";
 import {
+  type Ack,
   clientSchemas,
+  ERROR_CODES,
   generateRoomCode,
   isValidRoomCode,
   normalizeAlias,
@@ -71,5 +73,20 @@ describe("client message schemas", () => {
       winner: 0,
     });
     expect(parsed).toEqual({ actionId: "a1b2c3d4", coord: { col: 1, row: 1 } });
+  });
+});
+
+describe("acks and error codes", () => {
+  it("lets a plain success ack type-check and fail acks carry a protocol code", () => {
+    const success: Ack = { ok: true };
+    const failure: Ack = { ok: false, error: "GAME_FROZEN" };
+    expect(success.ok).toBe(true);
+    expect(failure.ok).toBe(false);
+  });
+
+  it("has dedicated codes for a frozen game, a seat already held and a closed room", () => {
+    expect(ERROR_CODES).toEqual(
+      expect.arrayContaining(["GAME_FROZEN", "ALREADY_IN_ROOM", "ROOM_CLOSED"]),
+    );
   });
 });

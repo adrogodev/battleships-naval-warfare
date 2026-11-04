@@ -138,6 +138,12 @@ export const ERROR_CODES = [
   "ALREADY_REQUESTED",
   "OPPONENT_GONE",
   "CANNOT_CLAIM",
+  /** A player is disconnected: the game is frozen until they return or the window expires. */
+  "GAME_FROZEN",
+  /** This connection already holds a seat; leave before creating or joining another room. */
+  "ALREADY_IN_ROOM",
+  /** The room was closed for inactivity. */
+  "ROOM_CLOSED",
   "SERVER_ERROR",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -181,7 +187,8 @@ export interface RoomState {
   readonly revealedOpponentFleet: readonly Placement[] | null;
 }
 
-export type Ack<T = Record<string, never>> =
+// `object` (not Record<string, never>) so a plain `{ ok: true }` is a valid success ack.
+export type Ack<T extends object = object> =
   | ({ ok: true } & T)
   | { ok: false; error: ErrorCode; message?: string };
 
