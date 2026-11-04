@@ -17,15 +17,20 @@ Objective: playable game vs Easy AI on a pure, tested domain. Branch: `feat/phas
 
 | ID | Specs | Route | Status | Evidence |
 |---|---|---|---|---|
-| T1 | S1 | inline | pending | |
-| T2 | S2, S3 | inline | pending | |
-| T3 | S4, S5 | inline | pending | |
-| T4 | S6 | inline | pending | |
-| T5 | S7, S8 | inline | pending | |
+| T1 | S1 | inline | done | 6f89736 |
+| T2 | S2, S3 | inline | done | 3b70ee8, df5b953 (RED: module missing → GREEN 17 tests) |
+| T3 | S4, S5 | inline | done | 3b70ee8 (RED: module missing → GREEN 41 tests) |
+| T4 | S6 | inline | done | 3b70ee8 + 30a92fe (RED → GREEN; hidden-fleet independence test) |
+| T5 | S7, S8 | inline | done | 30a92fe (RED → GREEN; full game through UI test) |
 
 Route evidence: tasks depend on each other in sequence (T2→T3→T4→T5), so no Writer-trigger parallelism; parent writes inline.
 
 ## Log
 
 - **L1** (2026-11-04) User: "Si, continua con la fase" — approves Phase 0 and starts Phase 1. Open questions in PLAN §12 unanswered: defaults applied as assumptions (location `games/battleships/`, TS 6.0.x, procedural audio, Chromium+WebKit, Render).
-- **L2** Pinned versions (highest semver ≥14 days old, checked with `npm view <pkg> time`): react 19.3.1, vite 8.3.5, @vitejs/plugin-react 6.1.2, typescript 6.0.3, zod 4.6.7, zustand 5.0.15, vitest 5.0.5, fast-check 4.10.2, @biomejs/biome 2.6.2.
+- **L2** Pinned versions (highest semver ≥14 days old, checked with `npm view <pkg> time`): react 19.3.1, vite 8.3.5, @vitejs/plugin-react 6.1.2, typescript 6.0.3, zod 4.6.7, vitest 5.0.5, fast-check 4.10.2, @biomejs/biome 2.6.2.
+- **L3** Review assessment after 3b70ee8 and 30a92fe: risk `medium`, `review_due: false` (`under_budget`); no native review started.
+- **L4** Defect found after committing 30a92fe: the `randomFleet` property test timed out (>5 s) under the full parallel suite. Cause: `validPlacementsFor` rebuilt the occupancy map per candidate. Fix df5b953 precomputes blocked cells once per ship; an equivalence property test pins `validPlacementsFor` to `validatePlacement`. Full suite then passed 3 consecutive runs (64/64).
+- **L5** Real-browser check (Chrome, production preview on 127.0.0.1:4173): menu → deploy (invalid ghost shows "Se sale del tablero") → random → "Flota lista" → battle → shot logged ("Agua en E-6", enemy reply "El enemigo falla en D-1"). Layout bug found (boards stacked at 1568 px) and fixed with a 1480 px breakpoint.
+- **L6** Bundle: 96.39 kB gzip JS initial (budget 300 kB).
+- **L7** Zustand not installed: `useSyncExternalStore` over the `LocalAiGame` adapter covers client state; revisit only if Phase 2 UI state grows.
