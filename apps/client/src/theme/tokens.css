@@ -1,0 +1,41 @@
+/* Design tokens: the only place raw values live. Approved in the Phase 0 prototype. */
+:root {
+  --c-abyss: #050b14;
+  --c-deep: #0b1a2b;
+  --c-steel: #1e3a52;
+  --c-sonar: #3fe0d0;
+  --c-signal: #4c8dff;
+  --c-hit: #ff5a36;
+  --c-sunk: #b3261e;
+  --c-miss: #8fa6bd;
+  --c-warning: #ffb020;
+  --c-text: #e6f1fa;
+  --c-text-dim: #8aa3b8;
+  --c-water: #0e2a44;
+  --c-radar: #041019;
+  --c-hull: #4e6b84;
+
+  --font-display: "Chakra Petch", "Rajdhani", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Inter", system-ui, sans-serif;
+  --fs-xs: 0.6875rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 2.25rem;
+  --tracking-label: 0.14em;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --bevel: 10px;
+  --cell: clamp(32px, 3.1vw, 40px);
+  --focus-ring: 2px solid var(--c-signal);
+
+  --dur-fast: 120ms;
+  --dur-pulse: 1200ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
