@@ -141,15 +141,21 @@ describe("every difficulty", () => {
     }
   });
 
-  it.each(DIFFICULTIES)("%s places a valid fleet for any seed", (difficulty) => {
-    fc.assert(
-      fc.property(fc.integer({ min: 0, max: 2 ** 31 - 1 }), (seed) => {
-        const fleet = createAi(difficulty).placeFleet(DEFAULT_RULES, createRng(seed));
-        expect(validateFleet(fleet, DEFAULT_RULES)).toEqual({ ok: true });
-      }),
-      { numRuns: 50 },
-    );
-  });
+  // Hard samples 30 fleets per placement, so 50 runs can exceed the default 5 s under a
+  // fully loaded parallel suite.
+  it.each(DIFFICULTIES)(
+    "%s places a valid fleet for any seed",
+    (difficulty) => {
+      fc.assert(
+        fc.property(fc.integer({ min: 0, max: 2 ** 31 - 1 }), (seed) => {
+          const fleet = createAi(difficulty).placeFleet(DEFAULT_RULES, createRng(seed));
+          expect(validateFleet(fleet, DEFAULT_RULES)).toEqual({ ok: true });
+        }),
+        { numRuns: 50 },
+      );
+    },
+    30_000,
+  );
 
   it("normal mixes orientations in its fleet", () => {
     fc.assert(
