@@ -1,6 +1,7 @@
 import {
   type Coord,
   coordKey,
+  type Difficulty,
   type Placement,
   type ShipSpec,
   sameCoord,
@@ -12,8 +13,14 @@ import type { HapticCue } from "../app/haptics";
 import type { MusicIntensity, SfxId } from "../audio";
 import { currentStreak, musicIntensity, presentBoard } from "../battle/presentation";
 import { Board, type BoardShip, type CellView } from "../components/Board";
+import { Insignia } from "../components/Insignia";
 import { burstPreset, fxBus } from "../fx";
 import { t } from "../i18n/es";
+import {
+  type CommanderMoment,
+  commanderComment,
+  commanderMomentAfterSink,
+} from "../narrative/commander";
 import { commsLine } from "../narrative/narrative";
 import { type ShotPhase, ShotQueue } from "../sequence/shotQueue";
 import type { MotionTokens } from "../theme/motion";
@@ -27,7 +34,10 @@ export interface BattleEffects {
 interface BattleScreenProps {
   readonly snapshot: GameSnapshot;
   readonly operation: string;
-  readonly opponent: string;
+  /** Rival commander, shown in the header and as the voice of the transmissions. */
+  readonly difficulty: Difficulty;
+  /** Show the commander's brief comments on key moments. */
+  readonly commanderComments: boolean;
   readonly motion: MotionTokens;
   readonly reducedMotion: boolean;
   readonly confirmShot: boolean;
@@ -39,6 +49,9 @@ interface BattleScreenProps {
   /** Called once the final shot has played and the victory/defeat banner is over. */
   readonly onFinished: () => void;
 }
+
+/** How long a commander transmission stays on screen. */
+const TRANSMISSION_MS = 2500;
 
 const lengthOf = (fleet: readonly ShipSpec[], shipId: string) =>
   fleet.find((ship) => ship.id === shipId)?.length ?? 0;
@@ -69,6 +82,7 @@ export function BattleScreen(props: BattleScreenProps) {
   const [pointer, setPointer] = useState<Coord | null>(null);
   const [finale, setFinale] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [transmission, setTransmission] = useState<{ id: number; text: string } | null>(null);
 
   const onPhaseRef = useRef<(entry: LogEntry, phase: ShotPhase) => void>(() => {});
   const [queue] = useState(
@@ -84,6 +98,13 @@ export function BattleScreen(props: BattleScreenProps) {
     latest.current.effects.play(id);
     if (id === "click") return;
     setCaption((previous) => ({ id: (previous?.id ?? 0) + 1, text: t.captions[id] }));
+  };
+
+  const comment = (moment: CommanderMoment, variant: number) => {
+    const { commanderComments, difficulty } = latest.current;
+    if (!commanderComments) return;
+    const text = commanderComment(difficulty, moment, variant);
+    setTransmission((previous) => ({ id: (previous?.id ?? 0) + 1, text }));
   };
 
   onPhaseRef.current = (entry, phase) => {
@@ -108,6 +129,15 @@ export function BattleScreen(props: BattleScreenProps) {
       if (center) for (const burst of burstPreset("sunk", center.x, center.y)) fxBus.emit(burst);
       if (entry.seat === 1) latest.current.effects.vibrate("ownSunk");
       setBanner(commsLine(entry));
+      const { log: fullLog, view: current } = latest.current.snapshot;
+      const sunkByShooter = fullLog.filter(
+        (e) => e.id <= entry.id && e.seat === entry.seat && e.result === "sunk",
+      ).length;
+      const moment = commanderMomentAfterSink(
+        entry.seat,
+        current.rules.fleet.length - sunkByShooter,
+      );
+      if (moment) comment(moment, entry.id);
     } else if (phase === "done" && latest.current.compact) {
       // Mobile: watch your fleet during the enemy turn, back to the radar for yours.
       setTab(entry.seat === 0 ? "deck" : "radar");
@@ -133,6 +163,19 @@ export function BattleScreen(props: BattleScreenProps) {
     const id = setTimeout(() => setBanner(null), 2200);
     return () => clearTimeout(id);
   }, [banner]);
+
+  // Opening transmission, once per battle.
+  useEffect(() => {
+    const { commanderComments, difficulty, operation } = latest.current;
+    if (!commanderComments) return;
+    setTransmission({ id: 1, text: commanderComment(difficulty, "battleStart", operation.length) });
+  }, []);
+
+  useEffect(() => {
+    if (!transmission) return;
+    const id = setTimeout(() => setTransmission(null), TRANSMISSION_MS);
+    return () => clearTimeout(id);
+  }, [transmission]);
 
   useEffect(() => {
     if (!caption) return;
@@ -184,6 +227,7 @@ export function BattleScreen(props: BattleScreenProps) {
     setFinale(true);
     sound(won ? "victory" : "defeat");
     if (won) latest.current.effects.vibrate("victory");
+    comment(won ? "playerWins" : "aiWins", log.length);
   });
   useEffect(() => {
     if (!finale) return;
@@ -262,6 +306,7 @@ export function BattleScreen(props: BattleScreenProps) {
   let alert: string | null = null;
   if (enemyAfloat === 1) alert = t.battle.lastShipEnemy;
   else if (ownAfloat === 1) alert = t.battle.lastShipOwn;
+  const commander = t.commanders[props.difficulty];
   const showRadar = !props.compact || tab === "radar";
   const showDeck = !props.compact || tab === "deck";
 
@@ -270,7 +315,10 @@ export function BattleScreen(props: BattleScreenProps) {
       <header className="battle__header panel">
         <div>
           <p className="label">{props.operation}</p>
-          <p className="battle__opponent">{t.battle.versus(props.opponent)}</p>
+          <p className="battle__opponent">
+            <Insignia rank={props.difficulty} className="battle__insignia" />
+            {t.battle.versus(commander.name)}
+          </p>
         </div>
         <div className={`turn${myTurn ? "" : " turn--enemy"}`} role="status">
           <span className="turn__dot" aria-hidden="true" />
@@ -422,6 +470,23 @@ export function BattleScreen(props: BattleScreenProps) {
           <p>{won ? t.finale.victory : t.finale.defeat}</p>
         </div>
       )}
+      <div className="transmission-live" aria-live="polite">
+        {transmission && (
+          <aside
+            key={transmission.id}
+            className="transmission panel"
+            aria-label={t.commander.transmission}
+          >
+            <Insignia rank={props.difficulty} className="transmission__insignia" />
+            <p className="transmission__body">
+              <span className="label">
+                {t.commander.transmission} · {commander.name}
+              </span>
+              <span className="transmission__line">{transmission.text}</span>
+            </p>
+          </aside>
+        )}
+      </div>
       <p className="sr-only" aria-live="assertive">
         {lastRevealed ? commsLine(lastRevealed) : ""}
       </p>

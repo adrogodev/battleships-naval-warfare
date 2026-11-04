@@ -14,10 +14,130 @@ export const es = {
     subtitle: "Centro de información de combate",
     playAi: "Jugar contra la IA",
     settings: "Configuración",
-    difficultyEasy: "Rival: Alférez · Dificultad fácil",
+    lastRival: (name: string, difficulty: string) => `Último rival: ${name} · ${difficulty}`,
   },
+  difficulty: {
+    title: "Elige a tu rival",
+    subtitle: "Cada comandante dirige a la flota enemiga con su propia táctica.",
+    lastUsed: "Última usada",
+    back: "Volver",
+  },
+  /** Rival commanders, one per AI difficulty. Lines are spoken by the commander to the player. */
   commanders: {
-    easy: { rank: "Alférez", name: "Alférez Ruiz" },
+    easy: {
+      rank: "Alférez",
+      name: "Alférez Ruiz",
+      difficulty: "Fácil",
+      description: "Dispara a ciegas y no persigue sus impactos.",
+      lines: {
+        battleStart: [
+          "¡Alférez Ruiz al mando! Bueno… veamos qué tal se me da.",
+          "Primera misión al mando. Prometo no ponérselo fácil… creo.",
+          "Cañones listos. ¿O eran los de babor? Da igual, ¡adelante!",
+        ],
+        aiSinks: [
+          "¡Lo hundí! ¿De verdad lo hundí? ¡Anótenlo!",
+          "¡Un barco suyo menos! Ni yo me lo esperaba.",
+        ],
+        playerSinks: [
+          "¡Ay! Ese barco me gustaba.",
+          "Vaya puntería. Tomo nota, comandante.",
+          "Eso ha dolido. Sigamos.",
+        ],
+        aiLastShip: [
+          "Me queda un barco… y mucha fe.",
+          "Último barco a flote. Que no cunda el pánico. Bueno, un poco.",
+        ],
+        playerLastShip: [
+          "¡Solo le queda uno! Esto se pone emocionante.",
+          "Un barco más y lo celebro. ¡Concentración, Ruiz!",
+        ],
+        aiWins: [
+          "¡He ganado! Buena partida, comandante. Pura suerte, lo admito.",
+          "Victoria para el alférez. Me lo ha puesto difícil, de verdad.",
+        ],
+        playerWins: [
+          "Me ha superado con claridad. Volveré a la academia a estudiar.",
+          "Bien jugado, comandante. Ha sido un honor aprender de usted.",
+        ],
+      },
+    },
+    normal: {
+      rank: "Capitán",
+      name: "Capitán Varela",
+      difficulty: "Normal",
+      description: "Barre en damero y remata cada impacto que consigue.",
+      lines: {
+        battleStart: [
+          "Capitán Varela. Sector dividido en cuadrícula. Comenzamos el barrido.",
+          "Procedimiento estándar, comandante. Que gane el mejor método.",
+          "Damero preparado. Cada casilla cuenta.",
+        ],
+        aiSinks: [
+          "Impacto, seguimiento y hundimiento. Manual de procedimiento.",
+          "Objetivo neutralizado. Volvemos al patrón de búsqueda.",
+        ],
+        playerSinks: [
+          "Pérdida registrada. Ajustamos el plan.",
+          "Buen disparo. No volverá a sorprendernos así.",
+          "Un barco menos. La disciplina se mantiene.",
+        ],
+        aiLastShip: [
+          "Último barco en línea. Mantendremos la posición hasta el final.",
+          "Nos queda uno. Aún no está decidido, comandante.",
+        ],
+        playerLastShip: [
+          "Le queda un barco. Cerramos el cerco.",
+          "Un solo objetivo restante. Barrido final.",
+        ],
+        aiWins: [
+          "Victoria por método. Ha sido un combate digno, comandante.",
+          "Fin de la operación. Buen combate; la próxima estará más reñida.",
+        ],
+        playerWins: [
+          "Ha superado mi procedimiento. Mis respetos, comandante.",
+          "Derrota aceptada. Revisaré el manual con su nombre en mente.",
+        ],
+      },
+    },
+    hard: {
+      rank: "Almirante",
+      name: "Almirante Castellanos",
+      difficulty: "Difícil",
+      description: "Calcula dónde es más probable que estés. No perdona.",
+      lines: {
+        battleStart: [
+          "Almirante Castellanos. Ya he calculado dónde no está su flota.",
+          "Cada disparo reduce sus opciones, comandante. Empecemos.",
+          "La probabilidad no descansa. Yo tampoco.",
+        ],
+        aiSinks: [
+          "Predicho. Confirmado.",
+          "Exactamente donde los números decían.",
+          "Una pieza menos en su tablero.",
+        ],
+        playerSinks: ["Interesante. Recalculo.", "Un buen disparo. No habrá muchos más."],
+        aiLastShip: [
+          "Un solo barco. Suficiente para terminar esto.",
+          "Me queda uno. No celebre todavía.",
+        ],
+        playerLastShip: [
+          "Su último barco. Ya sé dónde buscarlo.",
+          "Queda una incógnita. Pronto, ninguna.",
+        ],
+        aiWins: [
+          "Fin del cálculo. Ha resistido más que la mayoría.",
+          "Victoria. Su táctica merece una revancha.",
+        ],
+        playerWins: [
+          "Ha vencido a la probabilidad. Mi enhorabuena, comandante.",
+          "Pocas flotas me han derrotado. La suya, sí. Bien hecho.",
+        ],
+      },
+    },
+  },
+  commander: {
+    transmission: "Transmisión",
   },
   ships: {
     carrier: "Portaaviones",
@@ -209,6 +329,11 @@ export const es = {
     confirmAuto: "Solo en pantallas táctiles",
     confirmAlways: "Siempre",
     confirmNever: "Nunca",
+    rival: "Rival",
+    aiDelay: "Velocidad de la IA",
+    aiDelayNormal: "Normal (0,4–0,9 s)",
+    aiDelayFast: "Rápida (0,15–0,3 s)",
+    commanderComments: "Comentarios del comandante rival",
     reset: "Restablecer ajustes",
     back: "Volver",
   },

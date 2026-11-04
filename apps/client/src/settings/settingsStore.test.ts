@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSettingsStore, DEFAULT_SETTINGS, SAVE_KEY } from "./settingsStore";
+import { AI_DELAY_MS, createSettingsStore, DEFAULT_SETTINGS, SAVE_KEY } from "./settingsStore";
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
@@ -80,6 +80,67 @@ describe("settings store", () => {
     const store = createSettingsStore(broken);
     store.update({ vibration: false });
     expect(store.get().vibration).toBe(false);
+  });
+
+  it("defaults the AI options: easy, normal think delay and commander comments on", () => {
+    const settings = createSettingsStore(memoryStorage()).get();
+    expect(settings.lastDifficulty).toBe("easy");
+    expect(settings.aiDelay).toBe("normal");
+    expect(settings.commanderComments).toBe(true);
+  });
+
+  it("persists the last difficulty, AI delay and commander comments", () => {
+    const storage = memoryStorage();
+    createSettingsStore(storage).update({
+      lastDifficulty: "hard",
+      aiDelay: "fast",
+      commanderComments: false,
+    });
+    const reloaded = createSettingsStore(storage).get();
+    expect(reloaded.lastDifficulty).toBe("hard");
+    expect(reloaded.aiDelay).toBe("fast");
+    expect(reloaded.commanderComments).toBe(false);
+  });
+
+  it("loads an older v1 save without the AI fields, keeping its values", () => {
+    const storage = memoryStorage({
+      [SAVE_KEY]: JSON.stringify({
+        version: 1,
+        settings: {
+          mix: { music: 0.3, sfx: 0.8, ambient: 0.4, muted: false },
+          ambientEnabled: true,
+          vibration: false,
+          motion: "full",
+          showBlocked: true,
+          confirmShot: "never",
+        },
+      }),
+    });
+    const settings = createSettingsStore(storage).get();
+    expect(settings.vibration).toBe(false);
+    expect(settings.confirmShot).toBe("never");
+    expect(settings.mix.music).toBeCloseTo(0.3);
+    expect(settings.lastDifficulty).toBe("easy");
+    expect(settings.aiDelay).toBe("normal");
+    expect(settings.commanderComments).toBe(true);
+  });
+
+  it("rejects an unknown difficulty or delay field by field", () => {
+    const storage = memoryStorage({
+      [SAVE_KEY]: JSON.stringify({
+        version: 1,
+        settings: { lastDifficulty: "nightmare", aiDelay: "instant", commanderComments: false },
+      }),
+    });
+    const settings = createSettingsStore(storage).get();
+    expect(settings.lastDifficulty).toBe("easy");
+    expect(settings.aiDelay).toBe("normal");
+    expect(settings.commanderComments).toBe(false);
+  });
+
+  it("maps the AI delay setting to think-delay ranges, fast being shorter", () => {
+    expect(AI_DELAY_MS.normal).toEqual({ min: 400, max: 900 });
+    expect(AI_DELAY_MS.fast).toEqual({ min: 150, max: 300 });
   });
 
   it("clears saved data back to defaults", () => {

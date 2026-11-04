@@ -660,6 +660,9 @@ button.cell:focus-visible {
   margin: 0;
 }
 .battle__opponent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-display);
   font-weight: 600;
 }
@@ -965,6 +968,137 @@ button.cell:focus-visible {
 .settings__select {
   display: grid;
   gap: var(--space-1);
+}
+
+/* Commanders: insignia, difficulty cards, transmissions */
+.insignia {
+  flex: none;
+  width: var(--space-6);
+  height: var(--space-6);
+}
+.insignia__plate {
+  fill: var(--c-deep);
+  stroke: var(--c-steel);
+  stroke-width: 1;
+}
+.insignia__fill {
+  fill: currentColor;
+}
+.insignia__stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: square;
+}
+.insignia__laurel {
+  stroke-width: 1.5;
+}
+.insignia--easy {
+  color: var(--c-hull-line);
+}
+.insignia--normal {
+  color: var(--c-sonar);
+}
+.insignia--hard {
+  color: var(--c-warning);
+}
+.menu__rival {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.menu__insignia,
+.battle__insignia {
+  width: var(--space-5);
+  height: var(--space-5);
+}
+.difficulty {
+  max-width: 960px;
+}
+.difficulty__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.commander-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  text-align: start;
+  border: 1px solid var(--c-steel);
+}
+.commander-card.is-last {
+  border-color: var(--c-sonar);
+  box-shadow: var(--shadow-panel), var(--shadow-glow);
+}
+.commander-card__insignia {
+  width: var(--space-7);
+  height: var(--space-7);
+}
+.commander-card__text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.commander-card__tag {
+  margin-inline-start: var(--space-2);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--c-sonar);
+  color: var(--c-sonar);
+}
+.commander-card__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: var(--tracking-title);
+}
+.commander-card__description {
+  color: var(--c-text-dim);
+  font-size: var(--fs-sm);
+}
+.difficulty__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+.transmission {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-7) + var(--space-5));
+  transform: translateX(-50%);
+  z-index: var(--z-overlay);
+  width: max-content;
+  max-width: min(calc(100vw - 2 * var(--space-4)), 28rem);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid var(--c-sonar);
+  pointer-events: none;
+  animation: banner-in var(--dur-result, 250ms) var(--ease-out);
+}
+.transmission__body {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.transmission__line {
+  font-size: var(--fs-sm);
+}
+@media (min-width: 768px) {
+  .difficulty__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .commander-card {
+    flex-direction: column;
+  }
 }
 
 /* Responsive */

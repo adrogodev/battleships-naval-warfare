@@ -1,3 +1,4 @@
+import { DIFFICULTIES } from "@battleships/shared";
 import { z } from "zod";
 
 export const SAVE_KEY = "battleships.settings";
@@ -15,6 +16,12 @@ const settingsSchema = z.object({
   showBlocked: z.boolean(),
   /** "auto" asks for confirmation on touch screens only. */
   confirmShot: z.enum(["auto", "always", "never"]),
+  /** Difficulty of the last game started; preselected on the difficulty screen. */
+  lastDifficulty: z.enum(DIFFICULTIES),
+  /** AI "thinking" delay: see AI_DELAY_MS. */
+  aiDelay: z.enum(["normal", "fast"]),
+  /** The rival commander comments on key moments of the battle. */
+  commanderComments: z.boolean(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -26,6 +33,15 @@ export const DEFAULT_SETTINGS: Settings = {
   motion: "system",
   showBlocked: false,
   confirmShot: "auto",
+  lastDifficulty: "easy",
+  aiDelay: "normal",
+  commanderComments: true,
+};
+
+/** Think-delay range (ms) for each AI delay setting. */
+export const AI_DELAY_MS: Record<Settings["aiDelay"], { min: number; max: number }> = {
+  normal: { min: 400, max: 900 },
+  fast: { min: 150, max: 300 },
 };
 
 /** Minimal Storage surface so tests (and blocked storage) can stand in for localStorage. */

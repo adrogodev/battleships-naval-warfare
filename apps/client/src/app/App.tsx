@@ -1,4 +1,4 @@
-import { createRng, DEFAULT_RULES, type Placement } from "@battleships/shared";
+import { createRng, DEFAULT_RULES, type Difficulty, type Placement } from "@battleships/shared";
 import {
   type ReactNode,
   useCallback,
@@ -9,39 +9,37 @@ import {
 } from "react";
 import { LocalAiGame } from "../adapters/localAiGame";
 import { AudioEngine, type SfxId } from "../audio";
+import { Insignia } from "../components/Insignia";
 import { FxLayer, OceanBackground } from "../fx";
 import { t } from "../i18n/es";
 import { operationName } from "../narrative/narrative";
 import { type BattleEffects, BattleScreen } from "../screens/BattleScreen";
 import { DeployScreen } from "../screens/DeployScreen";
+import { DifficultyScreen } from "../screens/DifficultyScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
-import { settingsStore } from "../settings/settingsStore";
+import { AI_DELAY_MS, settingsStore } from "../settings/settingsStore";
 import { applyMotionTokens, type MotionTokens, motionTokens } from "../theme/motion";
 import { vibrate } from "./haptics";
 import { useCompactLayout, useConfirmShot, useReducedMotion, useSettings } from "./useEnvironment";
 
 export interface AppProps {
-  /** AI "thinking" delay; reducible for tests. */
+  /** AI "thinking" delay; overrides the aiDelay setting (reducible for tests). */
   readonly thinkDelayMs?: { min: number; max: number };
   readonly seed?: () => number;
   readonly audio?: AudioEngine;
 }
 
-type Screen = "boot" | "menu" | "settings" | "deploy" | "battle" | "results";
+type Screen = "boot" | "menu" | "settings" | "difficulty" | "deploy" | "battle" | "results";
 
-const DEFAULT_THINK_DELAY = { min: 400, max: 900 };
 const defaultAudio = new AudioEngine();
 
-export function App({
-  thinkDelayMs = DEFAULT_THINK_DELAY,
-  seed = Date.now,
-  audio = defaultAudio,
-}: AppProps) {
+export function App({ thinkDelayMs, seed = Date.now, audio = defaultAudio }: AppProps) {
   const [screen, setScreen] = useState<Screen>("boot");
   const [game, setGame] = useState<LocalAiGame | null>(null);
   const [operation, setOperation] = useState("");
   const settings = useSettings();
+  const [difficulty, setDifficulty] = useState<Difficulty>(settings.lastDifficulty);
   const reducedMotion = useReducedMotion(settings);
   const confirmShot = useConfirmShot(settings);
   const compact = useCompactLayout();
@@ -71,18 +69,27 @@ export function App({
     [audio, play],
   );
 
-  const boot = async () => {
-    await audio.unlock();
-    audio.startMusic();
+  // Never wait for audio: a browser may keep resume() pending (no trusted gesture, hidden tab).
+  const boot = () => {
     setScreen("menu");
+    void audio.unlock().then(() => audio.startMusic());
   };
 
-  const startDeploy = () => {
+  const startDeploy = (chosen: Difficulty) => {
     const gameSeed = seed();
-    setGame(new LocalAiGame({ difficulty: "easy", seed: gameSeed, thinkDelayMs }));
+    setDifficulty(chosen);
+    // Read at call time: the setting may have changed since the last render.
+    const delay = thinkDelayMs ?? AI_DELAY_MS[settingsStore.get().aiDelay];
+    setGame(new LocalAiGame({ difficulty: chosen, seed: gameSeed, thinkDelayMs: delay }));
     setOperation(operationName(createRng(gameSeed ^ 0x5eed)));
     audio.setIntensity(0);
     setScreen("deploy");
+  };
+
+  const chooseDifficulty = (chosen: Difficulty) => {
+    play("click");
+    settingsStore.update({ lastDifficulty: chosen });
+    startDeploy(chosen);
   };
 
   const onFleetReady = (fleet: readonly Placement[]) => {
@@ -118,13 +125,32 @@ export function App({
         }}
       />
     );
+  } else if (screen === "difficulty") {
+    content = (
+      <DifficultyScreen
+        lastDifficulty={settings.lastDifficulty}
+        onSelect={chooseDifficulty}
+        onBack={() => {
+          play("click");
+          setScreen("menu");
+        }}
+      />
+    );
   } else if (screen === "menu" || game === null) {
+    const remembered = t.commanders[settings.lastDifficulty];
     content = (
       <main className="screen menu">
         <Logo />
         <p className="label">{t.menu.subtitle}</p>
         <nav className="menu__actions" aria-label={t.appName}>
-          <button type="button" className="primary" onClick={startDeploy}>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              play("click");
+              setScreen("difficulty");
+            }}
+          >
             {t.menu.playAi}
           </button>
           <button
@@ -137,7 +163,10 @@ export function App({
             {t.menu.settings}
           </button>
         </nav>
-        <p className="dim">{t.menu.difficultyEasy}</p>
+        <p className="dim menu__rival">
+          <Insignia rank={settings.lastDifficulty} className="menu__insignia" />
+          {t.menu.lastRival(remembered.name, remembered.difficulty)}
+        </p>
       </main>
     );
   } else if (screen === "deploy") {
@@ -153,9 +182,11 @@ export function App({
         confirmShot={confirmShot}
         compact={compact}
         showBlocked={settings.showBlocked}
+        commanderComments={settings.commanderComments}
+        difficulty={difficulty}
         effects={effects}
         onFinished={() => setScreen("results")}
-        onPlayAgain={startDeploy}
+        onPlayAgain={() => startDeploy(difficulty)}
         onMenu={toMenu}
       />
     );
@@ -202,6 +233,8 @@ function LiveBattle({
   readonly confirmShot: boolean;
   readonly compact: boolean;
   readonly showBlocked: boolean;
+  readonly commanderComments: boolean;
+  readonly difficulty: Difficulty;
   readonly effects: BattleEffects;
   readonly onFinished: () => void;
   readonly onPlayAgain: () => void;
@@ -215,7 +248,6 @@ function LiveBattle({
     <BattleScreen
       {...battle}
       snapshot={snapshot}
-      opponent={t.commanders.easy.name}
       onFire={(coord) => game.fire(coord)}
       onLeave={() => game.leave()}
     />

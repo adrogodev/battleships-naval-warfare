@@ -113,6 +113,32 @@ export function SettingsScreen({ settings, onBack }: SettingsScreenProps) {
         </label>
       </section>
 
+      <section className="panel settings__group" aria-labelledby="rival-title">
+        <h2 id="rival-title" className="label">
+          {t.settings.rival}
+        </h2>
+        <label className="settings__select">
+          <span>{t.settings.aiDelay}</span>
+          <select
+            value={settings.aiDelay}
+            onChange={(event) =>
+              settingsStore.update({ aiDelay: event.target.value as Settings["aiDelay"] })
+            }
+          >
+            <option value="normal">{t.settings.aiDelayNormal}</option>
+            <option value="fast">{t.settings.aiDelayFast}</option>
+          </select>
+        </label>
+        <label className="settings__toggle">
+          <input
+            type="checkbox"
+            checked={settings.commanderComments}
+            onChange={(event) => settingsStore.update({ commanderComments: event.target.checked })}
+          />
+          {t.settings.commanderComments}
+        </label>
+      </section>
+
       <div className="settings__actions">
         <button type="button" onClick={() => settingsStore.clear()}>
           {t.settings.reset}
