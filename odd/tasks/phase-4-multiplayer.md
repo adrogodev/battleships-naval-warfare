@@ -20,7 +20,7 @@ Objective: two people play in real time from different devices against an author
 | T0 | S1, S3 (contract) | inline | done | protocol schemas, room codes, aliases, `ShotRecord`, domain `timeout`; shared 85/85 |
 | T1 | S1–S6, S8 (server) | delegated (unit A: `apps/server/**`, `docs/PROTOCOL.md`) | done | bfb5bb1 (RED → GREEN, 31 server tests incl. leak isolation) |
 | T2 | S1, S2, S5–S7 (client) | delegated (unit B: client surfaces) | done | dd5a9e5 (199 client tests) |
-| T3 | S8 (E2E) | after T1+T2 | pending | needs Playwright browser download (ask user) |
+| T3 | S8 (E2E) | inline | done | `e2e/multiplayer.spec.ts`: 4/4 (Chromium + WebKit); reload test RED without `adopt` |
 
 Route evidence: server and client are independent units with disjoint edit surfaces, each far over 100 changed lines, sharing only the T0 contract; parent is past the context backstop.
 
@@ -38,3 +38,8 @@ Route evidence: server and client are independent units with disjoint edit surfa
 - **L10** Bug found in that check: rejoining replayed every past shot as an animation (~18 s blocked). Fix: `ShotQueue.adopt` marks an existing history as presented (RED → GREEN), used when BattleScreen mounts. Verified by tests; not re-verified in the browser yet (the E2E reload test will).
 - **L11** Flaky timeouts under the parallel suite in heavy shared AI tests (hard placement property tests); fixed with a 30 s `testTimeout` for the shared project (8e2d0c5); suite then 318/318 three consecutive runs.
 - **L12** T3 (Playwright E2E) waits for the user's permission to download Chromium + WebKit (~260 MB).
+- **L13** (2026-11-05) User: "Dale, ejcuta lo que se requiera y continua desde donde lo dejaste". Installed @playwright/test 1.64.1 and Chromium + WebKit.
+- **L14** E2E (`pnpm test:e2e`, real server on 3001 + production preview on 4173, two browser contexts per test): full game to "Victoria"/"Derrota" + rematch back to deployment; reload mid-battle (rival sees "Comandante Ahab ha perdido la conexión" and "Partida congelada", history visible within 1.5 s, game continues). Result: 4 passed (5.1m): chromium 1.2m + 17.1s, webkit 2.4m + 47.5s. No page errors.
+- **L15** RED check of the reload fix: with the `adopt` call commented out, the reload test fails ("Expected: 6, Received: 1"); restored.
+- **L16** WebKit first timed out (12 min at shot 83): cause was trace recording (`retain-on-failure` records 2560×1440 screencasts for every action); switched to `on-first-retry`, full game then 2.5 min.
+- **L17** Final checks: `pnpm test` 318/318, `pnpm typecheck` (now also `e2e/`) and `pnpm lint` exit 0.

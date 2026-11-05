@@ -11,13 +11,15 @@
     "build": "pnpm -r build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "pnpm -r typecheck",
+    "test:e2e": "playwright test",
+    "typecheck": "pnpm -r typecheck && tsc -p e2e/tsconfig.json",
     "lint": "biome check .",
     "format": "biome check --write .",
     "simulate": "tsx scripts/simulate-ai.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.2",
+    "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
