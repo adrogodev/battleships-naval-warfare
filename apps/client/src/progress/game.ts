@@ -14,6 +14,8 @@ export interface GameRecord {
   readonly won: boolean;
   /** The player abandoned the battle. */
   readonly forfeited: boolean;
+  /** The rival abandoned (left or lost the connection for good) before losing every ship. */
+  readonly rivalForfeited: boolean;
   readonly stats: BattleStats;
   /** The player's own shots, in order (heatmap). */
   readonly ownShots: readonly Coord[];
@@ -35,18 +37,28 @@ export function gameRecordFromSnapshot(snapshot: GameSnapshot, meta: GameMeta): 
   const own = log.filter((entry) => entry.seat === 0);
   const won = view.winner === view.you;
   const fleetSize = view.rules.fleet.length;
+  const enemyShipsSunk = own.flatMap((entry) =>
+    entry.result === "sunk" && entry.shipId ? [entry.shipId] : [],
+  );
   return {
     ...meta,
     won,
     forfeited: !won && view.ownSunk.length < fleetSize,
+    rivalForfeited: won && enemyShipsSunk.length < fleetSize,
     stats,
     ownShots: own.map((entry) => entry.coord),
-    enemyShipsSunk: own.flatMap((entry) =>
-      entry.result === "sunk" && entry.shipId ? [entry.shipId] : [],
-    ),
+    enemyShipsSunk,
     ownShipsLost: view.ownSunk.length,
     fleetSize,
   };
+}
+
+/**
+ * A victory earned by sinking the whole enemy fleet. A win by the rival's abandonment still
+ * counts as a win, but never earns victory rewards: otherwise leaving a second tab would do.
+ */
+export function wonInBattle(game: GameRecord): boolean {
+  return game.won && !game.rivalForfeited;
 }
 
 let localGames = 0;

@@ -1,6 +1,6 @@
 import type { Difficulty } from "@battleships/shared";
 import { type ChallengeId, challengesMet } from "./challenges";
-import type { GameRecord } from "./game";
+import { type GameRecord, wonInBattle } from "./game";
 import { type RankInfo, rankForXp } from "./ranks";
 import { type XpBreakdown, xpForGame } from "./xp";
 
@@ -111,7 +111,7 @@ export function applyGame(
     accuracyGames: progress.accuracyGames + (shots > 0 ? 1 : 0),
     bestStreak: Math.max(progress.bestStreak, game.stats.maxStreak),
     shortestWinShots:
-      game.won && shots > 0
+      wonInBattle(game) && shots > 0
         ? Math.min(progress.shortestWinShots ?? Number.POSITIVE_INFINITY, shots)
         : progress.shortestWinShots,
     heatmap,

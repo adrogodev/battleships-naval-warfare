@@ -62,6 +62,24 @@ describe("game record from a finished snapshot", () => {
     expect(record.forfeited).toBe(true);
   });
 
+  it("marks a win with enemy ships still afloat as the rival's forfeit, and a full sinking not", () => {
+    const meta = { id: "x", mode: "online", difficulty: null } as const;
+    // The fixture log sinks only two enemy ships: the rival left before losing the rest.
+    expect(gameRecordFromSnapshot(snapshot(), meta).rivalForfeited).toBe(true);
+
+    const fullLog: ShotRecord[] = DEFAULT_RULES.fleet.map((ship, id) => ({
+      id,
+      seat: 0,
+      coord: { col: id, row: 0 },
+      result: "sunk",
+      shipId: ship.id,
+    }));
+    const sunkAll: GameSnapshot = { ...snapshot(), log: fullLog };
+    const record = gameRecordFromSnapshot(sunkAll, meta);
+    expect(record.won).toBe(true);
+    expect(record.rivalForfeited).toBe(false);
+  });
+
   it("identifies an online game by room and shot log, so a reload does not count it twice", () => {
     expect(onlineGameId("ABC234", log)).toBe(onlineGameId("ABC234", [...log]));
     expect(onlineGameId("ABC234", log)).not.toBe(onlineGameId("XYZ987", log));

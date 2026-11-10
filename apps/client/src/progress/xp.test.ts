@@ -35,6 +35,20 @@ describe("experience per game", () => {
     expect(xp).toEqual({ participation: 20, victory: 0, accuracy: 10, sinkings: 15, total: 45 });
   });
 
+  it("gives no victory experience when the rival abandoned, keeping what the player earned", () => {
+    const xp = xpForGame(
+      gameRecord({
+        mode: "online",
+        difficulty: null,
+        won: true,
+        rivalForfeited: true,
+        stats: { ...gameRecord().stats, accuracy: 0.4 },
+        enemyShipsSunk: ["destroyer"],
+      }),
+    );
+    expect(xp).toEqual({ participation: 20, victory: 0, accuracy: 20, sinkings: 15, total: 55 });
+  });
+
   it("only keeps the sinkings when the player abandoned", () => {
     const xp = xpForGame(
       gameRecord({

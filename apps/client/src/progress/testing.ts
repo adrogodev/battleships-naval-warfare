@@ -8,6 +8,7 @@ export function gameRecord(overrides: Partial<GameRecord> = {}): GameRecord {
     difficulty: "easy",
     won: true,
     forfeited: false,
+    rivalForfeited: false,
     stats: {
       shots: 50,
       hits: 17,

@@ -36,6 +36,21 @@ describe("challenges", () => {
     expect(met()).toEqual([]);
   });
 
+  it("completes no victory challenge when the rival abandoned, only what the player did", () => {
+    const forfeitWin = gameRecord({
+      mode: "online",
+      difficulty: null,
+      won: true,
+      rivalForfeited: true,
+      ownShipsLost: 4,
+      enemyShipsSunk: ["carrier"],
+      stats: { ...stats, shots: 3, accuracy: 1, maxStreak: 1 },
+    });
+    // Without the rule this would also meet first-victory, flawless-like, sharpshooter,
+    // last-ship and online-victory.
+    expect(met(forfeitWin)).toEqual(["carrier-first"]);
+  });
+
   it("“Gana en Difícil con menos de 45 disparos”", () => {
     const hard = { won: true, mode: "ai", difficulty: "hard" } as const;
     expect(metOne("hard-under-45", { ...hard, stats: { ...stats, shots: 44 } })).toBe(true);

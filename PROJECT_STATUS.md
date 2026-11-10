@@ -128,7 +128,7 @@ Otras verificaciones:
 - Fase 5 · Lighthouse mide la pantalla de arranque: el océano queda quieto hasta "Pulsa para comenzar". Con el océano animado desde la carga, el móvil bajaba a 64.
 - Fase 5 · WebKit de Playwright en Windows pinta el primer fotograma tras un disparo con 200–300 ms de retraso, aunque el DOM se actualiza en menos de 10 ms. Descarté el audio, los lienzos, los blur y clip-path, el layout y la velocidad de JavaScript (igual en ambos motores). No sé la causa. La prueba de 100 ms se salta en WebKit y no probé en Safari real.
 - Fase 5 · Las partículas mantienen sus colores en modo daltonismo: son decoración pasajera, no indican estado.
-- Fase 5 · Ganar por abandono suma la experiencia de victoria y puede completar desafíos ("Gana sin perder ningún barco") aunque no se haya disparado. Con dos pestañas se puede subir de rango sin jugar. Pendiente de decisión.
+- Corregido en la Fase 5: ganar por abandono del rival ya no da el bono de victoria, no completa desafíos de victoria ni cuenta como partida más corta. Sí cuenta como jugada y ganada, y conserva la experiencia de participación, precisión y hundimientos (`wonInBattle` en `progress/game.ts`). Antes, con dos pestañas se podía subir de rango sin jugar.
 - Fase 5 · En el tutorial y en el despliegue, R gira la vista previa; un barco ya colocado se gira volviendo a tocar la casilla.
 - Fase 5 · No hay selector de idioma: solo existe el español y un selector de una opción sería decorativo. Los textos están centralizados en `i18n/`.
 - Corregido en la Fase 4: al recargar en mitad de la batalla se repetían animadas todas las jugadas (~18 s sin poder disparar).
@@ -143,6 +143,7 @@ Otras verificaciones:
 - Fase 2 aprobada el 2026-11-04 (continuar solo con la fase anterior terminada).
 - Fase 3 aprobada el 2026-11-04, con la IA Normal tal como la describe la especificación (52,62).
 - 2026-11-05: autorizada la descarga de los navegadores de Playwright (Chromium y WebKit).
+- 2026-11-10: victorias por abandono del rival sin bono de victoria ni desafíos de victoria (opción recomendada, aceptada por el usuario).
 
 ## Supuestos
 

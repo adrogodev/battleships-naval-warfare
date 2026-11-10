@@ -67,6 +67,22 @@ describe("player progress aggregation", () => {
     expect(progress.bestStreak).toBe(6);
   });
 
+  it("counts a win by the rival's abandonment as played and won, but never as the shortest", () => {
+    const forfeitWin = gameRecord({
+      id: "f",
+      mode: "online",
+      difficulty: null,
+      won: true,
+      rivalForfeited: true,
+      stats: { ...stats, shots: 3 },
+    });
+    const progress = applyGame(EMPTY_PROGRESS, forfeitWin).progress;
+    expect(progress.games).toBe(1);
+    expect(progress.wins).toBe(1);
+    expect(progress.byMode.online).toEqual({ played: 1, won: 1 });
+    expect(progress.shortestWinShots).toBeNull();
+  });
+
   it("counts the player's own shots on a 10×10 heatmap", () => {
     const progress = applyGame(
       EMPTY_PROGRESS,

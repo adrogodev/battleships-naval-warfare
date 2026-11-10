@@ -464,7 +464,8 @@ export const es = {
     rematchWaiting: (alias: string) => `Esperando la respuesta de ${alias}…`,
     rematchOffered: (alias: string) => `${alias} quiere la revancha`,
     rivalGone: "Tu rival ha abandonado la sala. No es posible la revancha.",
-    rivalForfeit: "El rival ha abandonado la batalla. La victoria es tuya.",
+    rivalForfeit:
+      "El rival ha abandonado la batalla. La victoria es tuya, sin bono de victoria ni desafíos de victoria: solo cuenta lo que hundiste.",
     states: {
       loading: {
         title: "Estableciendo enlace",
