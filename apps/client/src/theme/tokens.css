@@ -54,8 +54,9 @@
   --radius-round: 50%;
   --bevel: 10px;
   --bevel-sm: 6px;
-  --cell: clamp(32px, 3.1vw, 40px);
-  --board-gutter: 22px;
+  /* Cells and gutters scale with the text size (up to 200 %): rem, never px. */
+  --cell: clamp(2rem, 3.1vw, 2.5rem);
+  --board-gutter: 1.375rem;
   --tap-min: 44px;
 
   /* Elevation */
@@ -74,4 +75,31 @@
   /* Easing (durations: see motion.ts) */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* High contrast: opaque surfaces, bright text and borders, thicker focus ring. */
+:root[data-contrast="high"] {
+  --c-abyss: #000;
+  --c-deep: #000;
+  --c-steel: #9fb8cc;
+  --c-text: #fff;
+  --c-text-dim: #d8e4ee;
+  --c-miss: #c9d7e4;
+  --c-panel: #000;
+  --c-scrim: rgb(0 0 0 / 0.9);
+  --c-miss-soft: rgb(201 215 228 / 0.5);
+  --focus-ring: 3px solid #ffe600;
+}
+
+/*
+  Colourblind palette (Okabe–Ito): hit, sunk and miss differ in hue and lightness, never by
+  red versus green alone. Each state also keeps its own shape (dot, ring, cross).
+*/
+:root[data-palette="colorblind"] {
+  --c-hit: #e69f00;
+  --c-sunk: #cc79a7;
+  --c-miss: #56b4e9;
+  --c-hit-soft: rgb(230 159 0 / 0.18);
+  --c-sunk-soft: rgb(204 121 167 / 0.38);
+  --c-miss-soft: rgb(86 180 233 / 0.35);
 }

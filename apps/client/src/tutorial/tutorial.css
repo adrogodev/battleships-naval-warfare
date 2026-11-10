@@ -1,4 +1,4 @@
-/* "Cómo jugar": interactive drill. Uses the shared tokens; durations come from the motion props. */
+﻿/* "CÃ³mo jugar": interactive drill. Uses the shared tokens; durations come from the motion props. */
 .tutorial {
   max-width: 960px;
   align-content: start;
@@ -43,7 +43,7 @@
   font-weight: 700;
 }
 .tutorial__progress li.is-done::before {
-  content: "✓ ";
+  content: "âœ“ ";
 }
 
 .tutorial__step {
@@ -52,7 +52,7 @@
   justify-items: center;
   animation: tutorial-step-in var(--tut-screen, 240ms) var(--ease-out, ease-out);
 }
-@media (min-width: 860px) {
+@media (min-width: 53.75em) {
   .tutorial__step {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;

@@ -125,6 +125,37 @@ describe("settings store", () => {
     expect(settings.commanderComments).toBe(true);
   });
 
+  it("defaults the accessibility and rules options: contrast and colourblind off, no-contact on", () => {
+    const settings = createSettingsStore(memoryStorage()).get();
+    expect(settings.highContrast).toBe(false);
+    expect(settings.colorblind).toBe(false);
+    expect(settings.noContactRule).toBe(true);
+  });
+
+  it("persists high contrast, colourblind mode and the default no-contact rule", () => {
+    const storage = memoryStorage();
+    createSettingsStore(storage).update({
+      highContrast: true,
+      colorblind: true,
+      noContactRule: false,
+    });
+    const reloaded = createSettingsStore(storage).get();
+    expect(reloaded.highContrast).toBe(true);
+    expect(reloaded.colorblind).toBe(true);
+    expect(reloaded.noContactRule).toBe(false);
+  });
+
+  it("loads a v1 save without the accessibility fields, keeping its values", () => {
+    const storage = memoryStorage({
+      [SAVE_KEY]: JSON.stringify({ version: 1, settings: { vibration: false, aiDelay: "fast" } }),
+    });
+    const settings = createSettingsStore(storage).get();
+    expect(settings.vibration).toBe(false);
+    expect(settings.aiDelay).toBe("fast");
+    expect(settings.highContrast).toBe(false);
+    expect(settings.noContactRule).toBe(true);
+  });
+
   it("rejects an unknown difficulty or delay field by field", () => {
     const storage = memoryStorage({
       [SAVE_KEY]: JSON.stringify({

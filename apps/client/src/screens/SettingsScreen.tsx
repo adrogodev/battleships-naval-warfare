@@ -89,6 +89,28 @@ export function SettingsScreen({ settings, onBack }: SettingsScreenProps) {
         {!vibrationAvailable && <p className="hint">{t.settings.vibrationUnsupported}</p>}
       </section>
 
+      <section className="panel settings__group" aria-labelledby="a11y-title">
+        <h2 id="a11y-title" className="label">
+          {t.settings.accessibility}
+        </h2>
+        <label className="settings__toggle">
+          <input
+            type="checkbox"
+            checked={settings.highContrast}
+            onChange={(event) => settingsStore.update({ highContrast: event.target.checked })}
+          />
+          {t.settings.highContrast}
+        </label>
+        <label className="settings__toggle">
+          <input
+            type="checkbox"
+            checked={settings.colorblind}
+            onChange={(event) => settingsStore.update({ colorblind: event.target.checked })}
+          />
+          {t.settings.colorblind}
+        </label>
+      </section>
+
       <section className="panel settings__group" aria-labelledby="gameplay-title">
         <h2 id="gameplay-title" className="label">
           {t.settings.gameplay}
@@ -100,6 +122,14 @@ export function SettingsScreen({ settings, onBack }: SettingsScreenProps) {
             onChange={(event) => settingsStore.update({ showBlocked: event.target.checked })}
           />
           {t.settings.showBlocked}
+        </label>
+        <label className="settings__toggle">
+          <input
+            type="checkbox"
+            checked={settings.noContactRule}
+            onChange={(event) => settingsStore.update({ noContactRule: event.target.checked })}
+          />
+          {t.settings.noContactRule}
         </label>
         <label className="settings__select">
           <span>{t.settings.confirmShot}</span>

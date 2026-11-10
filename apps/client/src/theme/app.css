@@ -1,4 +1,4 @@
-/*
+﻿/*
   Tactical layer (information) over the ocean layer (atmosphere).
   Every raw value comes from tokens.css; durations from the --dur-* variables set by motion.ts.
 */
@@ -371,7 +371,7 @@ button.cell[aria-disabled="true"] {
 button.cell:focus-visible {
   outline: none;
 }
-/* Miss — radar: dot with ring; deck: splash ripples */
+/* Miss â€” radar: dot with ring; deck: splash ripples */
 .board--radar .cell--miss::before {
   content: "";
   width: 22%;
@@ -397,7 +397,7 @@ button.cell:focus-visible {
     inset 0 0 0 5px var(--c-water),
     inset 0 0 0 6.5px var(--c-miss-soft);
 }
-/* Hit — radar: X with a brief pulse; deck: fire and smoke on the section */
+/* Hit â€” radar: X with a brief pulse; deck: fire and smoke on the section */
 .board--radar .cell--hit,
 .board--radar .cell--sunk {
   background: var(--c-hit-soft);
@@ -426,6 +426,10 @@ button.cell:focus-visible {
 .board--radar .cell--hit::after,
 .board--radar .cell--sunk::after {
   transform: rotate(-45deg);
+}
+/* Colourblind mode: sunk also differs from hit in shape (framed cell), not only in colour. */
+:root[data-palette="colorblind"] .board--radar .cell--sunk {
+  box-shadow: inset 0 0 0 2px var(--c-sunk);
 }
 .board--radar .cell--hit {
   animation: hitpulse var(--dur-pulse, 1200ms) var(--ease-out) 1;
@@ -1092,7 +1096,7 @@ button.cell:focus-visible {
 .transmission__line {
   font-size: var(--fs-sm);
 }
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .difficulty__cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1102,7 +1106,7 @@ button.cell:focus-visible {
 }
 
 /* Responsive */
-@media (max-width: 1479px) {
+@media (max-width: 92.4375em) {
   .battle__layout {
     grid-template-columns: 1fr 1fr;
   }
@@ -1111,17 +1115,21 @@ button.cell:focus-visible {
     order: -1;
   }
 }
-@media (max-width: 1023px) {
-  /* Tablet: side by side only while cells stay >= 32 px, otherwise stacked. */
+@media (max-width: 63.9375em) {
+  /* Tablet: side by side only while cells stay >= 2rem (32 px at 100 %), otherwise stacked. */
   :root {
-    --cell: clamp(32px, calc((100cqw - 2 * var(--board-gutter) - var(--space-5)) / 20), 40px);
+    --cell: clamp(2rem, calc((100cqw - 2 * var(--board-gutter) - var(--space-5)) / 20), 2.5rem);
   }
 }
-@media (max-width: 767px) {
-  /* Mobile: one full-width board; cells never below the 32 px touch target. */
+@media (max-width: 47.9375em) {
+  /* Mobile: one full-width board; cells stay >= 2rem unless the screen is too narrow for ten of them. */
   :root {
-    --board-gutter: 18px;
-    --cell: clamp(32px, calc((100cqw - var(--board-gutter)) / 10), 40px);
+    --board-gutter: 1.125rem;
+    --cell: clamp(
+      min(2rem, calc((100cqw - var(--board-gutter)) / 10)),
+      calc((100cqw - var(--board-gutter)) / 10),
+      2.5rem
+    );
   }
   .screen {
     padding: var(--space-4) var(--space-2);
@@ -1488,7 +1496,7 @@ button.cell:focus-visible {
 .reaction-bubble.is-mine {
   border-color: var(--c-signal);
 }
-@media (min-width: 768px) {
+@media (min-width: 48em) {
   .mp-entry__options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

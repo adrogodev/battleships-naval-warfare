@@ -264,6 +264,32 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Comentarios del comandante/ }));
     expect(settingsStore.get().commanderComments).toBe(false);
   });
+
+  it("applies high contrast and colourblind mode to the whole document from the settings", async () => {
+    await bootToMenu();
+    const root = document.documentElement;
+    expect(root.dataset.contrast).toBe("normal");
+    expect(root.dataset.palette).toBe("default");
+    fireEvent.click(screen.getByRole("button", { name: "Configuración" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Alto contraste/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Modo daltonismo/ }));
+    expect(settingsStore.get().highContrast).toBe(true);
+    expect(settingsStore.get().colorblind).toBe(true);
+    expect(root.dataset.contrast).toBe("high");
+    expect(root.dataset.palette).toBe("colorblind");
+  });
+
+  it("starts games against the AI with the default rules chosen in the settings", async () => {
+    await bootToMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Configuración" }));
+    const rule = screen.getByRole("checkbox", { name: /Regla de no contacto/ });
+    expect(rule).toBeChecked();
+    fireEvent.click(rule);
+    expect(settingsStore.get().noContactRule).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Volver" }));
+    chooseCommander(/Alférez Ruiz/);
+    expect(createdGames.at(-1)?.rules?.noContact).toBe(false);
+  });
 });
 
 describe("App · multiplayer", () => {

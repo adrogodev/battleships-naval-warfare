@@ -1,4 +1,4 @@
-import { DIFFICULTIES } from "@battleships/shared";
+import { DEFAULT_RULES, DIFFICULTIES } from "@battleships/shared";
 import { z } from "zod";
 
 export const SAVE_KEY = "battleships.settings";
@@ -22,6 +22,12 @@ const settingsSchema = z.object({
   aiDelay: z.enum(["normal", "fast"]),
   /** The rival commander comments on key moments of the battle. */
   commanderComments: z.boolean(),
+  /** Stronger borders, opaque panels and brighter text over the ocean. */
+  highContrast: z.boolean(),
+  /** Palette that never tells states apart by red versus green alone. */
+  colorblind: z.boolean(),
+  /** Default no-contact rule for games against the AI (multiplayer rules come from the server). */
+  noContactRule: z.boolean(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -36,6 +42,9 @@ export const DEFAULT_SETTINGS: Settings = {
   lastDifficulty: "easy",
   aiDelay: "normal",
   commanderComments: true,
+  highContrast: false,
+  colorblind: false,
+  noContactRule: DEFAULT_RULES.noContact,
 };
 
 /** Think-delay range (ms) for each AI delay setting. */

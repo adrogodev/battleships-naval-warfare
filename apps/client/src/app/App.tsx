@@ -1,4 +1,10 @@
-import { createRng, DEFAULT_RULES, type Difficulty, type Placement } from "@battleships/shared";
+import {
+  createRng,
+  DEFAULT_RULES,
+  type Difficulty,
+  type GameRules,
+  type Placement,
+} from "@battleships/shared";
 import {
   type ReactNode,
   useCallback,
@@ -80,6 +86,8 @@ export function App({
   const [screen, setScreen] = useState<Screen>("boot");
   const [joinCode, setJoinCode] = useState(() => codeFromLocation(window.location.search));
   const [game, setGame] = useState<LocalAiGame | null>(null);
+  /** Rules of the AI game being set up: deploy and the game must agree on them. */
+  const [rules, setRules] = useState<GameRules>(DEFAULT_RULES);
   const [operation, setOperation] = useState("");
   const [gameId, setGameId] = useState("");
   const [report, setReport] = useState<ProgressReport | null>(null);
@@ -96,6 +104,10 @@ export function App({
     applyMotionTokens(motion, document.documentElement);
     document.documentElement.dataset.motion = reducedMotion ? "reduced" : "full";
   }, [motion, reducedMotion]);
+  useEffect(() => {
+    document.documentElement.dataset.contrast = settings.highContrast ? "high" : "normal";
+    document.documentElement.dataset.palette = settings.colorblind ? "colorblind" : "default";
+  }, [settings.highContrast, settings.colorblind]);
   useEffect(() => audio.setMix(settings.mix), [audio, settings.mix]);
   useEffect(() => audio.setAmbient(settings.ambientEnabled), [audio, settings.ambientEnabled]);
   useEffect(() => {
@@ -126,8 +138,18 @@ export function App({
     const gameSeed = seed();
     setDifficulty(chosen);
     // Read at call time: the setting may have changed since the last render.
-    const delay = thinkDelayMs ?? AI_DELAY_MS[settingsStore.get().aiDelay];
-    setGame(new LocalAiGame({ difficulty: chosen, seed: gameSeed, thinkDelayMs: delay }));
+    const current = settingsStore.get();
+    const delay = thinkDelayMs ?? AI_DELAY_MS[current.aiDelay];
+    const gameRules = { ...DEFAULT_RULES, noContact: current.noContactRule };
+    setRules(gameRules);
+    setGame(
+      new LocalAiGame({
+        difficulty: chosen,
+        seed: gameSeed,
+        thinkDelayMs: delay,
+        rules: gameRules,
+      }),
+    );
     setGameId(aiGameId(gameSeed));
     setReport(null);
     setOperation(operationName(createRng(gameSeed ^ 0x5eed)));
@@ -309,7 +331,7 @@ export function App({
       </main>
     );
   } else if (screen === "deploy") {
-    content = <DeployScreen rules={DEFAULT_RULES} onReady={onFleetReady} play={play} />;
+    content = <DeployScreen rules={rules} onReady={onFleetReady} play={play} />;
   } else {
     content = (
       <LiveBattle
