@@ -2,26 +2,7 @@
 
 Batalla naval para el navegador con estética de centro de información de combate: océano vivo, radar con barrido, explosiones y audio generado en tiempo real. Se juega contra tres comandantes de IA con estrategias medibles o contra otra persona en línea, con un servidor que es la única autoridad de la partida.
 
-![Batalla contra la IA: radar enemigo a la izquierda, tu flota a la derecha y un disparo enemigo en vuelo](docs/screenshots/battle.jpg)
-
-## Vista previa
-
-| | |
-|---|---|
-| ![Menú principal con el rango del jugador](docs/screenshots/menu.jpg) | ![Elección de rival entre tres comandantes](docs/screenshots/commanders.jpg) |
-| **Menú.** Fondo de océano animado y rango del comandante. | **Tres rivales.** Fácil, Normal y Difícil, cada uno con su táctica. |
-| ![Despliegue de la flota con el muelle de barcos](docs/screenshots/deploy.jpg) | ![Pantalla de victoria con la hoja de servicio](docs/screenshots/results.jpg) |
-| **Despliegue.** Arrastrar y soltar, giro con R o despliegue aleatorio. | **Resultados.** Estadísticas, experiencia ganada y desafíos completados. |
-| ![Estadísticas personales con mapa de calor](docs/screenshots/stats.jpg) | ![Sala de espera multijugador con código de sala](docs/screenshots/waiting-room.jpg) |
-| **Estadísticas.** Victorias por modo, mejor racha y mapa de calor de tus disparos. | **Multijugador.** Sala privada con código y enlace de invitación. |
-| ![Tutorial interactivo con una pista sobre el radar](docs/screenshots/tutorial.jpg) | ![Batalla en alto contraste con paleta para daltonismo](docs/screenshots/accessibility.jpg) |
-| **Cómo jugar.** Tutorial interactivo: colocar, disparar y hundir. | **Accesibilidad.** Alto contraste, paleta segura para daltonismo y formas por estado. |
-
-<p align="center">
-  <img src="docs/screenshots/mobile.jpg" alt="Batalla en un teléfono con el selector Radar / Mi flota" width="300">
-  <br>
-  <em>En el teléfono: un tablero a pantalla completa y selector Radar / Mi flota.</em>
-</p>
+![Batalla contra la IA: radar enemigo a la izquierda, tu flota a la derecha y un disparo en curso](docs/screenshots/battle.jpg)
 
 ## Inicio rápido
 
@@ -68,7 +49,7 @@ La interfaz está en español y los textos están centralizados en `apps/client/
 | `pnpm typecheck` | TypeScript estricto en todos los paquetes |
 | `pnpm lint` / `pnpm format` | Biome: revisar o corregir lint y formato |
 | `pnpm simulate` | 1.000 partidas por dificultad; reescribe `docs/AI_METRICS.md` |
-| `pnpm screenshots` | Regenera las capturas de este README (necesita el servidor y `vite preview` en el puerto 4173) |
+| `pnpm screenshots` | Regenera la imagen de este README (necesita `vite preview` en el puerto 4173) |
 
 ## Configuración
 
