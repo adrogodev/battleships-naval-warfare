@@ -156,6 +156,45 @@ test("two players play a full online game and accept a rematch", async ({ browse
   }
 });
 
+test("a shot travels to the local server and back in under 150 ms", async ({ browser }) => {
+  const nemo = await openPlayer(browser, "Nemo", "reduce");
+  const ahab = await openPlayer(browser, "Ahab", "reduce");
+  const players = [nemo, ahab];
+  // Socket.IO frames: time from each "shot:fire" sent to the next "shot:result" received.
+  const roundTrips: number[] = [];
+  for (const { page } of players) {
+    let sentAt: number | null = null;
+    page.on("websocket", (socket) => {
+      socket.on("framesent", ({ payload }) => {
+        if (String(payload).includes('"shot:fire"')) sentAt = performance.now();
+      });
+      socket.on("framereceived", ({ payload }) => {
+        if (sentAt !== null && String(payload).includes('"shot:result"')) {
+          roundTrips.push(performance.now() - sentAt);
+          sentAt = null;
+        }
+      });
+    });
+  }
+  try {
+    const code = await createRoom(nemo, "Sin límite");
+    await joinByLink(ahab, code);
+    await readyAndDeploy(players);
+    for (let shot = 0; shot < 10; shot++) expect(await fireOnce(players)).toBe(true);
+
+    expect(roundTrips.length).toBeGreaterThanOrEqual(10);
+    test.info().annotations.push({
+      type: "shot round trip (ms)",
+      description: roundTrips.map((ms) => ms.toFixed(1)).join(", "),
+    });
+    expect(Math.max(...roundTrips)).toBeLessThan(150);
+    for (const player of players) expect(player.errors).toEqual([]);
+  } finally {
+    await nemo.close();
+    await ahab.close();
+  }
+});
+
 test("a reload in the middle of the battle rejoins the same seat without replaying history", async ({
   browser,
 }) => {
