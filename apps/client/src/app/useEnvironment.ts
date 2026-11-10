@@ -1,7 +1,15 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import type { PlayerProgress } from "../progress/progress";
 import { progressStore } from "../progress/progressStore";
 import { type Settings, settingsStore } from "../settings/settingsStore";
+
+/** A new screen starts at the top, not where the previous one was scrolled to. */
+export function useScrollToTopOn(screen: string): void {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `screen` is the trigger, not an input
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen]);
+}
 
 export function useSettings(): Settings {
   return useSyncExternalStore(settingsStore.subscribe, settingsStore.get);

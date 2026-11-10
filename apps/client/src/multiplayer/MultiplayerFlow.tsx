@@ -1,6 +1,7 @@
 import { createRng, type Placement, type RoomState } from "@battleships/shared";
 import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react";
 import { JOIN_PARAM, SocketGame } from "../adapters/socketGame";
+import { useScrollToTopOn } from "../app/useEnvironment";
 import type { SfxId } from "../audio";
 import { t } from "../i18n/es";
 import { operationName } from "../narrative/narrative";
@@ -88,6 +89,20 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
   };
 
   const kind = statusKindFor(snapshot);
+  // Mirrors the branches below: each of these views is a new screen for the player.
+  const fleetSent = room?.players.find((player) => player.seat === room.you)?.fleetSubmitted;
+  const view = !room
+    ? "entry"
+    : !room.view || !battle
+      ? "waiting"
+      : phase === "placement" || phase === "lobby"
+        ? fleetSent
+          ? "fleet-sent"
+          : "deploy"
+        : showResults
+          ? "results"
+          : "battle";
+  useScrollToTopOn(`${kind ?? view}:${round}`);
   if (kind) return <StatusScreen kind={kind} onRetry={() => game.retry()} onMenu={exit} />;
 
   let content: ReactNode;

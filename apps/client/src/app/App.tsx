@@ -44,6 +44,7 @@ import {
   useConfirmShot,
   useProgress,
   useReducedMotion,
+  useScrollToTopOn,
   useSettings,
 } from "./useEnvironment";
 
@@ -106,6 +107,7 @@ export function App({
   const reducedMotion = useReducedMotion(settings);
   const confirmShot = useConfirmShot(settings);
   const compact = useCompactLayout();
+  useScrollToTopOn(screen);
   const motion = motionTokens(reducedMotion);
 
   useEffect(() => {

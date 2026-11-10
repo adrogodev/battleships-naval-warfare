@@ -258,6 +258,17 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: /Girar \(R\) · vertical/ })).toBeInTheDocument();
   });
 
+  it("opens every new screen at the top of the page", async () => {
+    await bootToMenu();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "Configuración" }));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
+    scrollTo.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Volver" }));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
+    scrollTo.mockRestore();
+  });
+
   it("persists audio settings changed from the settings screen", async () => {
     await bootToMenu();
     fireEvent.click(screen.getByRole("button", { name: "Configuración" }));
