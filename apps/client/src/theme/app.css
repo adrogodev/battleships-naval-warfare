@@ -1443,6 +1443,15 @@ button.cell:focus-visible {
   display: grid;
   gap: var(--space-2);
 }
+/* Online deployment: rival status, reactions and the way out, under the deploy screen. */
+.mp-deploy-live {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  width: min(100%, calc(var(--space-7) * 20));
+  margin: 0 auto;
+  padding: 0 var(--space-4) var(--space-6);
+}
 .live-turn {
   display: flex;
   align-items: center;

@@ -403,6 +403,50 @@ describe("App · multiplayer", () => {
     expect(screen.getByText("No es tu turno.")).toBeInTheDocument();
   });
 
+  it("warns about a rival lost during deployment and lets the player claim or leave", async () => {
+    const mp = fakeMultiplayer();
+    await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });
+    fireEvent.click(screen.getByRole("button", { name: "Multijugador" }));
+    const socket = mp.socket();
+    act(() => socket.serverConnect());
+    fireEvent.change(screen.getByRole("textbox", { name: "Tu alias de comandante" }), {
+      target: { value: "Ana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear sala privada" }));
+    await act(async () => {
+      socket.reply("room:create", { ok: true, code: "ABC234", token: "t".repeat(20), seat: 0 });
+    });
+    const placement = (overrides: Parameters<typeof roomState>[0] = {}) =>
+      roomState({
+        players: twoPlayers({ ready: true }),
+        view: fakeView({ phase: "placement" }),
+        ...overrides,
+      });
+    act(() => socket.serverEmit("room:state", placement()));
+    expect(screen.getByRole("heading", { name: "Despliegue de flota" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        placement({ reconnect: { seat: 1, deadline: Date.now() + 60_000 } }),
+      ),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Comandante Bruno ha perdido la conexión");
+
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        placement({ reconnect: { seat: 1, deadline: Date.now() }, canClaimVictory: true }),
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reclamar la victoria" }));
+    expect(socket.last("victory:claim").payload).toHaveProperty("actionId");
+
+    fireEvent.click(screen.getByRole("button", { name: "Salir de la sala" }));
+    expect(screen.getByRole("button", { name: "Jugar contra la IA" })).toBeInTheDocument();
+  });
+
   it("counts each finished online game once, rematches included", async () => {
     const mp = fakeMultiplayer();
     await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });

@@ -115,6 +115,15 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
     );
   } else if (room.view.phase === "placement" || room.view.phase === "lobby") {
     const me = room.players.find((player) => player.seat === room.you);
+    // The rival can drop while fleets are being deployed too: warn, offer the claim and an exit.
+    const live = (
+      <LiveMatch
+        room={room}
+        reactions={snapshot.reactions}
+        onReact={(reaction) => void game.react(reaction)}
+        onClaimVictory={() => void game.claimVictory()}
+      />
+    );
     content = me?.fleetSubmitted ? (
       <main className="screen mp-waiting">
         <section className="panel mp-card mp-status__panel" aria-busy="true">
@@ -125,14 +134,23 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
             {t.multiplayer.leaveRoom}
           </button>
         </section>
+        {live}
       </main>
     ) : (
-      <DeployScreen
-        key={round}
-        rules={room.view.rules}
-        onReady={(fleet: readonly Placement[]) => void game.submitFleet(fleet)}
-        play={props.play}
-      />
+      <>
+        <DeployScreen
+          key={round}
+          rules={room.view.rules}
+          onReady={(fleet: readonly Placement[]) => void game.submitFleet(fleet)}
+          play={props.play}
+        />
+        <div className="mp-deploy-live">
+          {live}
+          <button type="button" className="ghost" onClick={exit}>
+            {t.multiplayer.leaveRoom}
+          </button>
+        </div>
+      </>
     );
   } else if (showResults) {
     const rival = rivalOf(room);
