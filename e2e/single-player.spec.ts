@@ -1,4 +1,4 @@
-﻿import { devices, expect, type Locator, type Page, test } from "@playwright/test";
+import { devices, expect, type Locator, type Page, test } from "@playwright/test";
 
 const EMPTY_CELL = 'button[aria-label$=", sin disparar"]';
 const YOUR_TURN = "Tu turno · Fija un blanco";

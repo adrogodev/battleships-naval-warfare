@@ -1,4 +1,4 @@
-﻿/*
+/*
   Tactical layer (information) over the ocean layer (atmosphere).
   Every raw value comes from tokens.css; durations from the --dur-* variables set by motion.ts.
 */
@@ -371,7 +371,7 @@ button.cell[aria-disabled="true"] {
 button.cell:focus-visible {
   outline: none;
 }
-/* Miss â€” radar: dot with ring; deck: splash ripples */
+/* Miss — radar: dot with ring; deck: splash ripples */
 .board--radar .cell--miss::before {
   content: "";
   width: 22%;
@@ -397,7 +397,7 @@ button.cell:focus-visible {
     inset 0 0 0 5px var(--c-water),
     inset 0 0 0 6.5px var(--c-miss-soft);
 }
-/* Hit â€” radar: X with a brief pulse; deck: fire and smoke on the section */
+/* Hit — radar: X with a brief pulse; deck: fire and smoke on the section */
 .board--radar .cell--hit,
 .board--radar .cell--sunk {
   background: var(--c-hit-soft);

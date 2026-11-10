@@ -1,4 +1,4 @@
-﻿import { render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OceanBackground } from "./OceanBackground";
 import { DEFAULT_OCEAN_COLORS, readOceanColors } from "./oceanColors";

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import "../fx.css";
 import { OceanRenderer } from "./OceanRenderer";
 import { readOceanColors } from "./oceanColors";

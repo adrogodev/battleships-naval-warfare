@@ -1,4 +1,4 @@
-﻿import {
+import {
   createRng,
   DEFAULT_RULES,
   type Difficulty,
