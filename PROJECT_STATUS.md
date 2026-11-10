@@ -109,6 +109,8 @@ Presupuestos de la sección 12, medidos en esta máquina:
 Otras verificaciones:
 
 - `pnpm typecheck` (incluye `e2e/`) y `pnpm lint`: sin errores.
+- Recorrido manual en Brave (Chromium 157) con la extensión de Claude, sobre el build de producción y el servidor real, sin errores en consola: tutorial completo con teclado; configuración (alto contraste, daltonismo, sombreado, persistencia); colocación por clic, arrastre y rechazo por contacto; partida completa contra la IA Normal (victoria en 54 disparos, +261 PE, ascenso a Cabo, 3 desafíos); estadísticas con mapa de calor; multijugador en dos pestañas (enlace de invitación, validación de alias, temporizador que pasa el turno, reacción, recarga en mitad de la batalla, partida completa, revancha, desconexión en el despliegue y reclamo de victoria); 390 px y texto al 200 % sin desborde; foco visible; borrar datos con cancelar y confirmar.
+- Corregido tras el recorrido: la marca "✓" del tutorial salía como "âœ“" (codificación); el foco no se veía en los botones biselados (`clip-path` recortaba el anillo); en el despliegue online no había aviso de rival desconectado ni forma de salir.
 - Lighthouse 12.8.2 por `npx` (no es dependencia del repo), sin el script que inyecta el antivirus Kaspersky de esta máquina (`--blocked-url-patterns`) y con un servidor estático con gzip, como en un hosting real; `vite preview` no comprime.
 
 ## Errores conocidos y desviaciones
@@ -125,6 +127,8 @@ Otras verificaciones:
 - Fase 5 · Lighthouse mide la pantalla de arranque: el océano queda quieto hasta "Pulsa para comenzar". Con el océano animado desde la carga, el móvil bajaba a 64.
 - Fase 5 · WebKit de Playwright en Windows pinta el primer fotograma tras un disparo con 200–300 ms de retraso, aunque el DOM se actualiza en menos de 10 ms. Descarté el audio, los lienzos, los blur y clip-path, el layout y la velocidad de JavaScript (igual en ambos motores). No sé la causa. La prueba de 100 ms se salta en WebKit y no probé en Safari real.
 - Fase 5 · Las partículas mantienen sus colores en modo daltonismo: son decoración pasajera, no indican estado.
+- Fase 5 · Ganar por abandono suma la experiencia de victoria y puede completar desafíos ("Gana sin perder ningún barco") aunque no se haya disparado. Con dos pestañas se puede subir de rango sin jugar. Pendiente de decisión.
+- Fase 5 · En el tutorial y en el despliegue, R gira la vista previa; un barco ya colocado se gira volviendo a tocar la casilla.
 - Fase 5 · No hay selector de idioma: solo existe el español y un selector de una opción sería decorativo. Los textos están centralizados en `i18n/`.
 - Corregido en la Fase 4: al recargar en mitad de la batalla se repetían animadas todas las jugadas (~18 s sin poder disparar).
 - No hay `apps/client/.env.example`: los permisos de este entorno bloquean escribir archivos `.env*`. `VITE_SERVER_URL` (por defecto, el host de la página en el puerto 3001) se documentará en el README de la Fase 6.

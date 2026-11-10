@@ -31,8 +31,8 @@ Assumptions (not asked by the user, marked as such):
 | T3 | S8 (contrast, rules), S9 | inline | done | 14e983d; RED 5 tests → GREEN |
 | T4 | S10 | inline | done | e5c9905, ccae7b4; RED lazyAudio, deck remount, still ocean → GREEN |
 | T5 | S11, S12 | inline | done | 228717f; 18 passed, 2 skipped |
-| T6 | S7 (fix) | inline | in progress | tutorial step mark showed "âœ“" (encoding damage); found in the Brave pass |
-| T7 | S1–S11 | inline | in progress | manual pass in Brave with the Claude extension |
+| T6 | S7, S9 (fixes) | inline | done | 9f4432c mojibake + guard test; bad9d15 deploy disconnect; d830b63 focus ring, each RED → GREEN |
+| T7 | S1–S11 | inline | done | Brave pass: all listed features exercised, findings in PROJECT_STATUS.md |
 
 Route evidence: T1 and T2 are independent behaviors with disjoint edit surfaces (unit B writes only `tutorial/**` and its own copy module; the parent wires it into the menu), each several files and far over 100 lines, launched together. T3–T5 touch App.tsx, settings and tokens owned by T1, so they follow it.
 
@@ -44,3 +44,4 @@ Route evidence: T1 and T2 are independent behaviors with disjoint edit surfaces 
 - **L4** (2026-11-10) Measured budgets in PROJECT_STATUS.md. Mobile Lighthouse median 88 (deviation). WebKit Windows click → paint 200–300 ms, cause unknown after ruling out audio, canvas, blur, layout and JS speed.
 - **L5** (2026-11-10) User: "Una vez termines haz la prueba completa con todas las funcionalidades posibles usando la extension de Claude desde el navegador brave". User: "Dale, continua desde donde quedaste".
 - **L6** (2026-11-10) Brave pass found mojibake in `tutorial.css`, `app.css` comments and this file, caused by reading files with PowerShell 5.1 `Get-Content` without `-Encoding utf8`. Repaired byte-exact.
+- **L7** (2026-11-10) Brave pass also found: no rival-disconnect notice or exit during online deployment (fixed); focus ring hidden by clip-path on beveled buttons (fixed); forfeit wins award XP and challenges with zero shots (open decision). Full E2E: 18 passed, 2 skipped.
