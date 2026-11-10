@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+﻿import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OceanBackground } from "./OceanBackground";
 import { DEFAULT_OCEAN_COLORS, readOceanColors } from "./oceanColors";
@@ -22,11 +22,11 @@ describe("OceanBackground", () => {
   });
 
   it("renders a decorative full-viewport canvas and survives a null context", () => {
-    const { container, rerender, unmount } = render(<OceanBackground reducedMotion={false} />);
+    const { container, rerender, unmount } = render(<OceanBackground still={false} />);
     const canvas = container.querySelector("canvas");
     expect(canvas).toHaveAttribute("aria-hidden", "true");
     expect(canvas).toHaveClass("fx-ocean");
-    rerender(<OceanBackground reducedMotion />);
+    rerender(<OceanBackground still />);
     expect(() => unmount()).not.toThrow();
   });
 });

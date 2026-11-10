@@ -407,8 +407,8 @@ export function BattleScreen(props: BattleScreenProps) {
           )}
           {showDeck && (
             <section
-              key={shake}
-              className={`board-wrap${shake > 0 ? " is-shaking" : ""}`}
+              // Alternating animation names restart the shake without remounting the board.
+              className={`board-wrap${shake > 0 ? ` is-shaking is-shaking--${shake % 2}` : ""}`}
               data-board="deck"
               aria-labelledby="deck-title"
             >

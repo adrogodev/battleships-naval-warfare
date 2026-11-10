@@ -732,7 +732,22 @@ button.cell:focus-visible {
 .board-wrap.is-shaking {
   animation: shake var(--dur-shake, 150ms) ease-out;
 }
+/* A new animation name restarts the shake on the same element (see BattleScreen). */
+.board-wrap.is-shaking--1 {
+  animation-name: shake-again;
+}
 @keyframes shake {
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  50% {
+    transform: translate(2px, -1px);
+  }
+  75% {
+    transform: translate(-1px, 0);
+  }
+}
+@keyframes shake-again {
   25% {
     transform: translate(-2px, 1px);
   }

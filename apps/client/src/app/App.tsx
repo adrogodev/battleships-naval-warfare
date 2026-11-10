@@ -1,4 +1,4 @@
-import {
+﻿import {
   createRng,
   DEFAULT_RULES,
   type Difficulty,
@@ -365,7 +365,8 @@ export function App({
   return (
     <>
       <Suspense fallback={null}>
-        <OceanBackground reducedMotion={reducedMotion} />
+        {/* Still until the boot tap: no animation loop competes with the first load. */}
+        <OceanBackground still={reducedMotion || screen === "boot"} />
       </Suspense>
       {content}
       <Suspense fallback={null}>

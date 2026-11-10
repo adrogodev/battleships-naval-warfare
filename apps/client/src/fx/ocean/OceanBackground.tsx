@@ -1,19 +1,19 @@
-import { useEffect, useRef } from "react";
+﻿import { useEffect, useRef } from "react";
 import "../fx.css";
 import { OceanRenderer } from "./OceanRenderer";
 import { readOceanColors } from "./oceanColors";
 
 export interface OceanBackgroundProps {
-  /** Draws a single static frame instead of animating. */
-  readonly reducedMotion: boolean;
+  /** Draws a single static frame instead of animating (reduced motion, boot screen). */
+  readonly still: boolean;
 }
 
 /** Animated ocean behind every screen. Purely decorative. */
-export function OceanBackground({ reducedMotion }: OceanBackgroundProps) {
+export function OceanBackground({ still }: OceanBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<OceanRenderer | null>(null);
-  const reducedMotionRef = useRef(reducedMotion);
-  reducedMotionRef.current = reducedMotion;
+  const stillRef = useRef(still);
+  stillRef.current = still;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,7 +24,7 @@ export function OceanBackground({ reducedMotion }: OceanBackgroundProps) {
     rendererRef.current = renderer;
     const onResize = () => renderer.resize(window.innerWidth, window.innerHeight, devicePixelRatio);
     onResize();
-    renderer.setReducedMotion(reducedMotionRef.current);
+    renderer.setReducedMotion(stillRef.current);
     renderer.start();
     window.addEventListener("resize", onResize);
     return () => {
@@ -35,8 +35,8 @@ export function OceanBackground({ reducedMotion }: OceanBackgroundProps) {
   }, []);
 
   useEffect(() => {
-    rendererRef.current?.setReducedMotion(reducedMotion);
-  }, [reducedMotion]);
+    rendererRef.current?.setReducedMotion(still);
+  }, [still]);
 
   return <canvas ref={canvasRef} className="fx-ocean" aria-hidden="true" tabIndex={-1} />;
 }

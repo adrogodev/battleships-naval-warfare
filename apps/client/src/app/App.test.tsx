@@ -222,6 +222,19 @@ describe("App", () => {
     expect(screen.getAllByText(/A-1/).length).toBeGreaterThan(0);
   });
 
+  it("shakes the deck on an own shot without rebuilding the board", async () => {
+    await startBattle();
+    const deck = document.querySelector('[data-board="deck"]');
+    const target = document.querySelector<HTMLButtonElement>(
+      '[data-board="radar"] button[aria-label$="sin disparar"]',
+    );
+    if (!deck || !target) throw new Error("Battle boards not rendered");
+    fireEvent.click(target);
+    expect(deck.className).toContain("is-shaking");
+    expect(deck.isConnected).toBe(true);
+    expect(document.querySelector('[data-board="deck"]')).toBe(deck);
+  });
+
   it("asks for a second tap before firing when shot confirmation is on", async () => {
     settingsStore.update({ confirmShot: "always" });
     await startBattle();
