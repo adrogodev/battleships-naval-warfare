@@ -1,0 +1,125 @@
+/* "Cómo jugar": interactive drill. Uses the shared tokens; durations come from the motion props. */
+.tutorial {
+  max-width: 960px;
+  align-content: start;
+}
+
+.tutorial__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tutorial__progress {
+  display: grid;
+  gap: var(--space-2);
+}
+.tutorial__progress ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tutorial__progress li {
+  flex: 1 1 6rem;
+  padding: var(--space-1) var(--space-2);
+  border-top: 3px solid var(--c-steel);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+.tutorial__progress li.is-done {
+  border-top-color: var(--c-sonar);
+}
+.tutorial__progress li.is-current {
+  border-top-color: var(--c-sonar);
+  color: inherit;
+  font-weight: 700;
+}
+.tutorial__progress li.is-done::before {
+  content: "✓ ";
+}
+
+.tutorial__step {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  animation: tutorial-step-in var(--tut-screen, 240ms) var(--ease-out, ease-out);
+}
+@media (min-width: 860px) {
+  .tutorial__step {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+  .tutorial__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.tutorial__guide {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+}
+.tutorial__guide p {
+  margin: 0;
+}
+.tutorial__heading {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-title);
+  text-transform: uppercase;
+}
+.tutorial__heading:focus-visible {
+  outline: 2px solid var(--c-sonar);
+  outline-offset: 4px;
+}
+.tutorial__hint {
+  color: var(--c-sonar);
+  font-weight: 600;
+}
+.tutorial__cta {
+  font-weight: 600;
+}
+
+.tutorial__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+/* Sinking reveal: the hidden silhouette surfaces on the radar. */
+.tutorial__reveal .ship {
+  animation: tutorial-reveal var(--tut-reveal, 600ms) var(--ease-out, ease-out) both;
+}
+
+@keyframes tutorial-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes tutorial-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.tutorial--reduced .tutorial__step,
+.tutorial--reduced .tutorial__reveal .ship {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial__step,
+  .tutorial__reveal .ship {
+    animation: none;
+  }
+}
