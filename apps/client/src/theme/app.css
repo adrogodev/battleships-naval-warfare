@@ -47,6 +47,10 @@ button:hover:not(:disabled) {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
+/* Beveled buttons clip everything outside their shape (clip-path), so their ring sits inside. */
+button:focus-visible {
+  outline-offset: -4px;
+}
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;

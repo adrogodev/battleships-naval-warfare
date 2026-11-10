@@ -94,6 +94,17 @@ test.describe("against the AI", () => {
     await tabTo(page, start);
     await page.keyboard.press("Enter");
 
+    // Beveled buttons use clip-path, which would hide an outline drawn outside them.
+    const menuButton = page.getByRole("button", { name: "Multijugador" });
+    const box = await menuButton.boundingBox();
+    if (!box) throw new Error("Menu button not laid out");
+    const around = { x: box.x - 6, y: box.y - 6, width: box.width + 12, height: box.height + 12 };
+    const unfocused = await page.screenshot({ clip: around, animations: "disabled" });
+    await tabTo(page, menuButton);
+    const focused = await page.screenshot({ clip: around, animations: "disabled" });
+    expect(focused.equals(unfocused)).toBe(false);
+    await page.keyboard.press("Shift+Tab");
+
     for (const target of [
       page.getByRole("button", { name: "Jugar contra la IA" }),
       page.getByRole("button", { name: /Alférez Ruiz/ }),
