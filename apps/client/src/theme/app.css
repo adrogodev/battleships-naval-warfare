@@ -1129,7 +1129,8 @@ button.cell:focus-visible {
   .battle__layout {
     grid-template-columns: 1fr 1fr;
   }
-  .battle__boards {
+  /* Boards first in the battle only: the results screen reuses .battle__boards in its flow. */
+  .battle__layout > .battle__boards {
     grid-column: 1 / -1;
     order: -1;
   }

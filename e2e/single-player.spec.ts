@@ -79,6 +79,11 @@ test.describe("against the AI", () => {
       expect(shots).toBeLessThanOrEqual(100);
     }
     await expect(resultsTitle(page)).toHaveText(/^(Victoria|Derrota)$/);
+    // The outcome reads first; the final maps follow it, at any width.
+    const title = await resultsTitle(page).boundingBox();
+    const heading = await page.getByRole("heading", { name: "Mapas finales" }).boundingBox();
+    const maps = await page.getByRole("group", { name: "Radar · Flota enemiga" }).boundingBox();
+    expect(title && heading && maps && title.y < heading.y && heading.y < maps.y).toBe(true);
 
     await page.getByRole("button", { name: "Volver al menú" }).click();
     await page.getByRole("button", { name: "Estadísticas" }).click();
