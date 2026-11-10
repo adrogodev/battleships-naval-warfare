@@ -4,6 +4,9 @@ import { JOIN_PARAM, SocketGame } from "../adapters/socketGame";
 import type { SfxId } from "../audio";
 import { t } from "../i18n/es";
 import { operationName } from "../narrative/narrative";
+import { gameRecordFromSnapshot, onlineGameId } from "../progress/game";
+import type { ProgressReport } from "../progress/progress";
+import { progressStore } from "../progress/progressStore";
 import { type BattleEffects, BattleScreen } from "../screens/BattleScreen";
 import { DeployScreen } from "../screens/DeployScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
@@ -47,6 +50,7 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
   const [showResults, setShowResults] = useState(false);
   const [round, setRound] = useState(0);
   const [rivalLeft, setRivalLeft] = useState(false);
+  const [report, setReport] = useState<ProgressReport | null>(null);
 
   useEffect(() => {
     game.connect();
@@ -61,6 +65,7 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
     if (phase === "placement" && showResults) {
       setShowResults(false);
       setRivalLeft(false);
+      setReport(null);
       setRound((value) => value + 1);
     }
   }, [phase, showResults]);
@@ -137,6 +142,7 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
       <ResultsScreen
         snapshot={battle}
         onMenu={exit}
+        progress={report}
         {...(won && room.endReason !== "fleet_destroyed"
           ? { summary: t.multiplayer.rivalForfeit }
           : {})}
@@ -175,7 +181,18 @@ export function MultiplayerFlow(props: MultiplayerFlowProps) {
           // The server answers a forfeit with the final state; otherwise there is nothing to show.
           if (!result.ok || game.getSnapshot().room?.view?.phase !== "finished") exit();
         }}
-        onFinished={() => setShowResults(true)}
+        onFinished={() => {
+          // Counted once: the id is the room code plus a fingerprint of the full shot log.
+          const recorded = progressStore.recordGame(
+            gameRecordFromSnapshot(battle, {
+              id: onlineGameId(room.code, battle.log),
+              mode: "online",
+              difficulty: null,
+            }),
+          );
+          if (recorded) setReport(recorded);
+          setShowResults(true);
+        }}
         live={
           <LiveMatch
             room={room}

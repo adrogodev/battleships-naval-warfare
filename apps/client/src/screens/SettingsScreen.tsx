@@ -1,6 +1,7 @@
-import type { ChangeEvent } from "react";
+import { type ChangeEvent, useState } from "react";
 import { hapticsSupported } from "../app/haptics";
 import { t } from "../i18n/es";
+import { clearAllData } from "../progress/progressStore";
 import { type Settings, settingsStore } from "../settings/settingsStore";
 
 interface SettingsScreenProps {
@@ -14,6 +15,8 @@ export function SettingsScreen({ settings, onBack }: SettingsScreenProps) {
   const setMix = (key: "music" | "sfx" | "ambient") => (event: ChangeEvent<HTMLInputElement>) =>
     settingsStore.update({ mix: { ...settings.mix, [key]: Number(event.target.value) / 100 } });
   const vibrationAvailable = hapticsSupported();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   return (
     <main className="screen settings">
@@ -137,6 +140,48 @@ export function SettingsScreen({ settings, onBack }: SettingsScreenProps) {
           />
           {t.settings.commanderComments}
         </label>
+      </section>
+
+      <section className="panel settings__group" aria-labelledby="data-title">
+        <h2 id="data-title" className="label">
+          {t.settings.data}
+        </h2>
+        <p className="hint">{t.settings.deleteDataHint}</p>
+        {confirmingDelete ? (
+          <div className="confirm" role="alertdialog" aria-label={t.settings.deleteConfirm}>
+            <p>{t.settings.deleteConfirm}</p>
+            <div className="settings__actions">
+              <button
+                type="button"
+                className="danger"
+                onClick={() => {
+                  clearAllData();
+                  setConfirmingDelete(false);
+                  setDeleted(true);
+                }}
+              >
+                {t.settings.deleteYes}
+              </button>
+              <button type="button" onClick={() => setConfirmingDelete(false)}>
+                {t.settings.deleteNo}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="ghost settings__delete"
+            onClick={() => {
+              setDeleted(false);
+              setConfirmingDelete(true);
+            }}
+          >
+            {t.settings.deleteData}
+          </button>
+        )}
+        <p className="hint" role="status">
+          {deleted ? t.settings.deleted : ""}
+        </p>
       </section>
 
       <div className="settings__actions">

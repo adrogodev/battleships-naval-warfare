@@ -11,20 +11,33 @@ import { LocalAiGame } from "../adapters/localAiGame";
 import { SESSION_KEY, type SocketGame } from "../adapters/socketGame";
 import { AudioEngine, type SfxId } from "../audio";
 import { Insignia } from "../components/Insignia";
+import { RankBadge } from "../components/RankBadge";
 import { FxLayer, OceanBackground } from "../fx";
 import { t } from "../i18n/es";
 import { MultiplayerFlow } from "../multiplayer/MultiplayerFlow";
 import { codeFromLocation } from "../multiplayer/roomCode";
 import { operationName } from "../narrative/narrative";
+import { aiGameId, gameRecordFromSnapshot } from "../progress/game";
+import type { ProgressReport } from "../progress/progress";
+import { progressStore } from "../progress/progressStore";
+import { rankForXp } from "../progress/ranks";
 import { type BattleEffects, BattleScreen } from "../screens/BattleScreen";
 import { DeployScreen } from "../screens/DeployScreen";
 import { DifficultyScreen } from "../screens/DifficultyScreen";
 import { ResultsScreen } from "../screens/ResultsScreen";
 import { SettingsScreen } from "../screens/SettingsScreen";
+import { StatsScreen } from "../screens/StatsScreen";
 import { AI_DELAY_MS, settingsStore } from "../settings/settingsStore";
 import { applyMotionTokens, type MotionTokens, motionTokens } from "../theme/motion";
+import { TutorialScreen } from "../tutorial/TutorialScreen";
 import { vibrate } from "./haptics";
-import { useCompactLayout, useConfirmShot, useReducedMotion, useSettings } from "./useEnvironment";
+import {
+  useCompactLayout,
+  useConfirmShot,
+  useProgress,
+  useReducedMotion,
+  useSettings,
+} from "./useEnvironment";
 
 export interface AppProps {
   /** AI "thinking" delay; overrides the aiDelay setting (reducible for tests). */
@@ -39,6 +52,8 @@ type Screen =
   | "boot"
   | "menu"
   | "settings"
+  | "stats"
+  | "tutorial"
   | "difficulty"
   | "deploy"
   | "battle"
@@ -66,7 +81,11 @@ export function App({
   const [joinCode, setJoinCode] = useState(() => codeFromLocation(window.location.search));
   const [game, setGame] = useState<LocalAiGame | null>(null);
   const [operation, setOperation] = useState("");
+  const [gameId, setGameId] = useState("");
+  const [report, setReport] = useState<ProgressReport | null>(null);
   const settings = useSettings();
+  const progress = useProgress();
+  const rank = rankForXp(progress.xp);
   const [difficulty, setDifficulty] = useState<Difficulty>(settings.lastDifficulty);
   const reducedMotion = useReducedMotion(settings);
   const confirmShot = useConfirmShot(settings);
@@ -109,6 +128,8 @@ export function App({
     // Read at call time: the setting may have changed since the last render.
     const delay = thinkDelayMs ?? AI_DELAY_MS[settingsStore.get().aiDelay];
     setGame(new LocalAiGame({ difficulty: chosen, seed: gameSeed, thinkDelayMs: delay }));
+    setGameId(aiGameId(gameSeed));
+    setReport(null);
     setOperation(operationName(createRng(gameSeed ^ 0x5eed)));
     audio.setIntensity(0);
     setScreen("deploy");
@@ -132,6 +153,20 @@ export function App({
     setScreen("menu");
   };
 
+  /** Counts the finished local game once (rank XP, statistics, challenges), then shows results. */
+  const onBattleFinished = () => {
+    if (game) {
+      const record = gameRecordFromSnapshot(game.getSnapshot(), {
+        id: gameId,
+        mode: "ai",
+        difficulty,
+      });
+      const recorded = progressStore.recordGame(record);
+      if (recorded) setReport(recorded);
+    }
+    setScreen("results");
+  };
+
   let content: ReactNode;
   if (screen === "boot") {
     content = (
@@ -148,6 +183,28 @@ export function App({
       <SettingsScreen
         settings={settings}
         onBack={() => {
+          play("click");
+          setScreen("menu");
+        }}
+      />
+    );
+  } else if (screen === "stats") {
+    content = (
+      <StatsScreen
+        progress={progress}
+        onBack={() => {
+          play("click");
+          setScreen("menu");
+        }}
+      />
+    );
+  } else if (screen === "tutorial") {
+    content = (
+      <TutorialScreen
+        motion={motion}
+        reducedMotion={reducedMotion}
+        play={play}
+        onExit={() => {
           play("click");
           setScreen("menu");
         }}
@@ -212,12 +269,39 @@ export function App({
             type="button"
             onClick={() => {
               play("click");
+              setScreen("tutorial");
+            }}
+          >
+            {t.menu.howToPlay}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              play("click");
+              setScreen("stats");
+            }}
+          >
+            {t.menu.stats}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              play("click");
               setScreen("settings");
             }}
           >
             {t.menu.settings}
           </button>
         </nav>
+        <p className="menu__rank">
+          <RankBadge index={rank.index} className="menu__rank-badge" />
+          <span>
+            <span className="label">{t.menu.rank}</span>
+            <br />
+            <strong>{t.progress.ranks[rank.id]}</strong>{" "}
+            <span className="num dim">· {t.progress.xp(progress.xp)}</span>
+          </span>
+        </p>
         <p className="dim menu__rival">
           <Insignia rank={settings.lastDifficulty} className="menu__insignia" />
           {t.menu.lastRival(remembered.name, remembered.difficulty)}
@@ -240,7 +324,8 @@ export function App({
         commanderComments={settings.commanderComments}
         difficulty={difficulty}
         effects={effects}
-        onFinished={() => setScreen("results")}
+        report={report}
+        onFinished={onBattleFinished}
         onPlayAgain={() => startDeploy(difficulty)}
         onMenu={toMenu}
       />
@@ -279,10 +364,12 @@ function LiveBattle({
   onPlayAgain,
   onMenu,
   difficulty,
+  report,
   ...battle
 }: {
   readonly game: LocalAiGame;
   readonly screen: Screen;
+  readonly report: ProgressReport | null;
   readonly operation: string;
   readonly motion: MotionTokens;
   readonly reducedMotion: boolean;
@@ -298,7 +385,14 @@ function LiveBattle({
 }) {
   const snapshot = useSyncExternalStore(game.subscribe, game.getSnapshot);
   if (screen === "results") {
-    return <ResultsScreen snapshot={snapshot} onPlayAgain={onPlayAgain} onMenu={onMenu} />;
+    return (
+      <ResultsScreen
+        snapshot={snapshot}
+        onPlayAgain={onPlayAgain}
+        onMenu={onMenu}
+        progress={report}
+      />
+    );
   }
   return (
     <BattleScreen

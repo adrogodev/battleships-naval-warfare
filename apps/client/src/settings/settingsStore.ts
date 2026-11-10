@@ -51,26 +51,72 @@ export interface KeyValueStorage {
   removeItem(key: string): void;
 }
 
-type RawSave = { version: number; settings: unknown };
+/** A save as read from storage: `data` is the payload stored under the save's field. */
+export type RawSave = { version: number; data: unknown };
 
 /** Each entry upgrades a save from version N to N + 1. */
-const MIGRATIONS: Record<number, (data: RawSave) => RawSave> = {
-  // v0: unversioned object holding the settings fields directly.
-  0: (data) => ({ version: 1, settings: data.settings }),
+export type Migrations = Readonly<Record<number, (save: RawSave) => RawSave>>;
+
+/** Where and how a versioned save lives: `{ version, [field]: payload }` under `key`. */
+export interface SaveFormat {
+  readonly key: string;
+  readonly field: string;
+  readonly version: number;
+  readonly migrations: Migrations;
+}
+
+const SETTINGS_FORMAT: SaveFormat = {
+  key: SAVE_KEY,
+  field: "settings",
+  version: CURRENT_VERSION,
+  migrations: {
+    // v0: unversioned object holding the settings fields directly.
+    0: (save) => ({ version: 1, data: save.data }),
+  },
 };
 
-function migrate(raw: unknown): unknown {
+function migrate(raw: unknown, format: SaveFormat): unknown {
   if (raw === null || typeof raw !== "object") return undefined;
   let save: RawSave =
     "version" in raw && typeof raw.version === "number"
-      ? { version: raw.version, settings: "settings" in raw ? raw.settings : undefined }
-      : { version: 0, settings: raw };
-  while (save.version < CURRENT_VERSION) {
-    const step = MIGRATIONS[save.version];
+      ? { version: raw.version, data: (raw as Record<string, unknown>)[format.field] }
+      : { version: 0, data: raw };
+  while (save.version < format.version) {
+    const step = format.migrations[save.version];
     if (!step) return undefined;
     save = step(save);
   }
-  return save.settings;
+  return save.data;
+}
+
+/** Reads and migrates a versioned save; undefined when missing, corrupted or unreadable. */
+export function readSave(storage: KeyValueStorage | null, format: SaveFormat): unknown {
+  try {
+    const text = storage?.getItem(format.key);
+    return text ? migrate(JSON.parse(text), format) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function writeSave(
+  storage: KeyValueStorage | null,
+  format: SaveFormat,
+  data: unknown,
+): void {
+  try {
+    storage?.setItem(format.key, JSON.stringify({ version: format.version, [format.field]: data }));
+  } catch {
+    // Private mode or blocked storage: the data keeps working for this session.
+  }
+}
+
+export function removeSave(storage: KeyValueStorage | null, key: string): void {
+  try {
+    storage?.removeItem(key);
+  } catch {
+    // Storage unavailable: memory state is still reset.
+  }
 }
 
 /** Field-by-field recovery: a bad field falls back to its default without losing the others. */
@@ -107,39 +153,24 @@ export function createSettingsStore(storage: KeyValueStorage | null): SettingsSt
     },
     update(patch) {
       current = sanitize({ ...current, ...patch });
-      save(storage, current);
+      writeSave(storage, SETTINGS_FORMAT, current);
       emit();
     },
     clear() {
       current = DEFAULT_SETTINGS;
-      try {
-        storage?.removeItem(SAVE_KEY);
-      } catch {
-        // Storage unavailable: memory state is still reset.
-      }
+      removeSave(storage, SAVE_KEY);
       emit();
     },
   };
 }
 
 function load(storage: KeyValueStorage | null): Settings {
-  try {
-    const text = storage?.getItem(SAVE_KEY);
-    return text ? sanitize(migrate(JSON.parse(text))) : DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+  const raw = readSave(storage, SETTINGS_FORMAT);
+  return raw === undefined ? DEFAULT_SETTINGS : sanitize(raw);
 }
 
-function save(storage: KeyValueStorage | null, settings: Settings): void {
-  try {
-    storage?.setItem(SAVE_KEY, JSON.stringify({ version: CURRENT_VERSION, settings }));
-  } catch {
-    // Private mode or blocked storage: settings keep working for this session.
-  }
-}
-
-function safeLocalStorage(): KeyValueStorage | null {
+/** localStorage, or null where it is missing or blocked (private mode, sandboxed frames). */
+export function safeLocalStorage(): KeyValueStorage | null {
   try {
     return typeof localStorage === "undefined" ? null : localStorage;
   } catch {

@@ -6,6 +6,8 @@ import { AudioEngine } from "../audio";
 import { FakeAudioContext } from "../audio/fakeAudioContext";
 import { FakeSocket, fakeView, roomState, twoPlayers } from "../multiplayer/testing/fakeSocket";
 import { commanderLines } from "../narrative/commander";
+import { progressStore } from "../progress/progressStore";
+import { gameRecord } from "../progress/testing";
 import { settingsStore } from "../settings/settingsStore";
 import { App, type AppProps } from "./App";
 
@@ -25,6 +27,7 @@ vi.mock("../adapters/localAiGame", async (importOriginal) => {
 beforeEach(() => {
   vi.useFakeTimers();
   settingsStore.clear();
+  progressStore.clear();
   createdGames.length = 0;
 });
 afterEach(() => {
@@ -138,7 +141,64 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: /Victoria|Derrota/ })).toBeInTheDocument();
     expect(screen.getByText("Precisión")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Jugar otra vez" })).toBeEnabled();
-  }, 60_000);
+
+    // The game is counted once for rank, statistics and challenges.
+    const progress = progressStore.get();
+    expect(progress.games).toBe(1);
+    expect(progress.byMode.ai.easy.played).toBe(1);
+    expect(progress.xp).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: "Hoja de servicio" })).toHaveTextContent(
+      `+${progress.xp} PE`,
+    );
+    settle();
+    expect(progressStore.get().games).toBe(1);
+    // ~50 s alone; the full 100-shot game sits close to 60 s when the suite runs in parallel.
+  }, 120_000);
+
+  it("counts an abandoned battle once, as a loss", async () => {
+    await startBattle();
+    fireEvent.click(screen.getByRole("button", { name: "Abandonar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sí, abandonar" }));
+    settle();
+    expect(screen.getByRole("heading", { name: "Derrota" })).toBeInTheDocument();
+    expect(progressStore.get().games).toBe(1);
+    expect(progressStore.get().wins).toBe(0);
+  });
+
+  it("shows the player's rank on the menu and opens the statistics", async () => {
+    progressStore.recordGame(gameRecord({ id: "seed" }));
+    await bootToMenu();
+    const rank = screen.getByText("Tu rango").closest("p");
+    expect(rank).toHaveTextContent(/Marinero|Cabo/);
+    const nav = screen.getByRole("navigation");
+    const labels = within(nav)
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(labels.indexOf("Estadísticas")).toBeGreaterThan(labels.indexOf("Multijugador"));
+    expect(labels.indexOf("Estadísticas")).toBeLessThan(labels.indexOf("Configuración"));
+    fireEvent.click(screen.getByRole("button", { name: "Estadísticas" }));
+    expect(screen.getByRole("heading", { name: "Estadísticas", level: 1 })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Volver" }));
+    expect(screen.getByRole("button", { name: "Jugar contra la IA" })).toBeInTheDocument();
+  });
+
+  it("opens the interactive tutorial from the menu and leaves it", async () => {
+    await bootToMenu();
+    const labels = within(screen.getByRole("navigation"))
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(labels).toEqual([
+      "Jugar contra la IA",
+      "Multijugador",
+      "Cómo jugar",
+      "Estadísticas",
+      "Configuración",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Cómo jugar" }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Cómo jugar");
+    fireEvent.click(screen.getByRole("button", { name: /Saltar/ }));
+    expect(screen.getByRole("button", { name: "Jugar contra la IA" })).toBeInTheDocument();
+  });
 
   it("plays the shot sequence before revealing the result and blocks input meanwhile", async () => {
     await startBattle();
@@ -302,6 +362,62 @@ describe("App · multiplayer", () => {
       socket.reply("shot:fire", { ok: false, error: "NOT_YOUR_TURN" });
     });
     expect(screen.getByText("No es tu turno.")).toBeInTheDocument();
+  });
+
+  it("counts each finished online game once, rematches included", async () => {
+    const mp = fakeMultiplayer();
+    await bootToMenu({ createMultiplayerGame: mp.createMultiplayerGame });
+    fireEvent.click(screen.getByRole("button", { name: "Multijugador" }));
+    const socket = mp.socket();
+    act(() => socket.serverConnect());
+    fireEvent.change(screen.getByRole("textbox", { name: "Tu alias de comandante" }), {
+      target: { value: "Ana" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Crear sala privada" }));
+    await act(async () => {
+      socket.reply("room:create", { ok: true, code: "ABC234", token: "t".repeat(20), seat: 0 });
+    });
+    const players = twoPlayers({ ready: true });
+    const finishedWith = (log: ReturnType<typeof roomState>["log"]) =>
+      roomState({
+        players,
+        view: fakeView({ phase: "finished", winner: 0 }),
+        log,
+        endReason: "fleet_destroyed",
+      });
+    const firstLog = [{ id: 0, seat: 0, coord: { col: 4, row: 4 }, result: "hit" } as const];
+    act(() =>
+      socket.serverEmit("room:state", roomState({ players, view: fakeView({ phase: "battle" }) })),
+    );
+    act(() => socket.serverEmit("room:state", finishedWith(firstLog)));
+    settle();
+    expect(screen.getByRole("heading", { name: "Victoria" })).toBeInTheDocument();
+    expect(progressStore.get().byMode.online).toEqual({ played: 1, won: 1 });
+    expect(screen.getByRole("region", { name: "Hoja de servicio" })).toBeInTheDocument();
+
+    // The same final state again (e.g. a re-sync) is not a new game.
+    act(() => socket.serverEmit("room:state", finishedWith(firstLog)));
+    settle();
+    expect(progressStore.get().games).toBe(1);
+
+    // A rematch is a new game.
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        roomState({ players, view: fakeView({ phase: "placement" }) }),
+      ),
+    );
+    act(() =>
+      socket.serverEmit("room:state", roomState({ players, view: fakeView({ phase: "battle" }) })),
+    );
+    act(() =>
+      socket.serverEmit(
+        "room:state",
+        finishedWith([...firstLog, { id: 1, seat: 1, coord: { col: 0, row: 0 }, result: "miss" }]),
+      ),
+    );
+    settle();
+    expect(progressStore.get().byMode.online).toEqual({ played: 2, won: 2 });
   });
 });
 

@@ -8,7 +8,9 @@ import {
 import type { ReactNode } from "react";
 import type { GameSnapshot } from "../adapters/localAiGame";
 import { Board, type BoardShip, type CellView } from "../components/Board";
+import { ChallengeBadge, RankBadge } from "../components/RankBadge";
 import { t } from "../i18n/es";
+import type { ProgressReport } from "../progress/progress";
 
 interface ResultsScreenProps {
   readonly snapshot: GameSnapshot;
@@ -18,6 +20,58 @@ interface ResultsScreenProps {
   /** Overrides the result sentence (e.g. the rival abandoned). */
   readonly summary?: string;
   readonly extra?: ReactNode;
+  /** What this game added to the commander's progression (XP, promotion, challenges). */
+  readonly progress?: ProgressReport | null;
+}
+
+const XP_PARTS = ["participation", "victory", "accuracy", "sinkings"] as const;
+
+function ProgressPanel({ report }: { readonly report: ProgressReport }) {
+  const rankName = t.progress.ranks[report.rankAfter.id];
+  return (
+    <section className="panel results__progress" aria-labelledby="progress-title">
+      <h2 id="progress-title" className="label">
+        {t.results.progressTitle}
+      </h2>
+      <div className="results__rank">
+        <RankBadge index={report.rankAfter.index} className="results__badge" />
+        <p>
+          <span className="num results__xp">{t.results.xpGained(report.xp.total)}</span>
+          <br />
+          {report.rankUp ? (
+            <strong className="results__rankup">{t.results.rankUp(rankName)}</strong>
+          ) : (
+            t.results.currentRank(rankName)
+          )}
+        </p>
+      </div>
+      <dl className="results__xp-parts">
+        {XP_PARTS.map((part) => (
+          <div key={part}>
+            <dt className="label">{t.results.xpParts[part]}</dt>
+            <dd className="num">{t.results.xpGained(report.xp[part])}</dd>
+          </div>
+        ))}
+      </dl>
+      {report.newChallenges.length > 0 && (
+        <>
+          <h3 className="label">{t.results.newChallenges}</h3>
+          <ul className="challenges challenges--new">
+            {report.newChallenges.map((id) => (
+              <li key={id} className="challenge is-completed">
+                <ChallengeBadge completed />
+                <span>
+                  <strong>{t.progress.challenges[id].badge}</strong>
+                  <br />
+                  <span className="dim">{t.progress.challenges[id].title}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
 }
 
 function formatDuration(ms: number): string {
@@ -58,6 +112,7 @@ export function ResultsScreen({
   onMenu,
   summary,
   extra,
+  progress,
 }: ResultsScreenProps) {
   const { view, stats, revealedEnemyFleet } = snapshot;
   const won = view.winner === view.you;
@@ -107,6 +162,8 @@ export function ResultsScreen({
           <dd className="num">{formatDuration(stats.durationMs)}</dd>
         </div>
       </dl>
+
+      {progress && <ProgressPanel report={progress} />}
 
       <h2 className="label">{t.results.finalMaps}</h2>
       <div className="battle__boards">

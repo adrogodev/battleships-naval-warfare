@@ -1,13 +1,14 @@
 import {
   type Coord,
   coordKey,
+  coordLabel,
   type Difficulty,
   type Placement,
   type ShipSpec,
   sameCoord,
   shipCells,
 } from "@battleships/shared";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { GameSnapshot, LogEntry } from "../adapters/localAiGame";
 import type { HapticCue } from "../app/haptics";
 import type { MusicIntensity, SfxId } from "../audio";
@@ -443,19 +444,10 @@ export function BattleScreen(props: BattleScreenProps) {
                 ▲ {t.battle.streak(streak)}
               </p>
             )}
-            <ol className="log">
-              {revealed
-                .slice(-10)
-                .reverse()
-                .map((entry) => (
-                  <li
-                    key={entry.id}
-                    className={`log__entry log__entry--${entry.result} log__entry--seat${entry.seat}`}
-                  >
-                    {commsLine(entry)}
-                  </li>
-                ))}
-            </ol>
+            <div className="log__sides">
+              <ShotHistory entries={revealed} seat={0} title={t.battle.logOwn} />
+              <ShotHistory entries={revealed} seat={1} title={t.battle.logEnemy} />
+            </div>
           </section>
           {confirmingLeave ? (
             <div className="confirm panel" role="alertdialog" aria-label={t.battle.confirmLeave}>
@@ -513,6 +505,50 @@ export function BattleScreen(props: BattleScreenProps) {
         {lastRevealed ? commsLine(lastRevealed) : ""}
       </p>
     </main>
+  );
+}
+
+/** Shots kept per side in the combat log. */
+const HISTORY_PER_SIDE = 10;
+
+/** Last shots of one side, newest first, each with its coordinate and result. */
+function ShotHistory({
+  entries,
+  seat,
+  title,
+}: {
+  readonly entries: readonly LogEntry[];
+  readonly seat: 0 | 1;
+  readonly title: string;
+}) {
+  const id = useId();
+  const shots = entries
+    .filter((entry) => entry.seat === seat)
+    .slice(-HISTORY_PER_SIDE)
+    .reverse();
+  return (
+    <div className="log__side">
+      <h3 id={id} className="label log__title">
+        {title}
+      </h3>
+      {shots.length === 0 ? (
+        <p className="dim log__empty">{t.battle.logEmpty}</p>
+      ) : (
+        <ol className="log" aria-labelledby={id}>
+          {shots.map((entry) => (
+            <li
+              key={entry.id}
+              className={`log__entry log__entry--${entry.result} log__entry--seat${entry.seat}`}
+            >
+              <span className="num log__coord">{coordLabel(entry.coord)}</span>{" "}
+              {entry.result === "sunk"
+                ? t.battle.logResult.sunk(entry.shipId ? t.ships[entry.shipId] : "")
+                : t.battle.logResult[entry.result]}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 

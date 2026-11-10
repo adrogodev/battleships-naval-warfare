@@ -1493,3 +1493,195 @@ button.cell:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Progression: player rank, statistics, heatmap and challenges */
+button.danger {
+  border-color: var(--c-hit);
+  color: var(--c-hit);
+}
+button.danger:hover:not(:disabled) {
+  background: var(--c-hit-soft);
+  border-color: var(--c-hit);
+}
+.rank-badge--enlisted {
+  color: var(--c-hull-line);
+}
+.rank-badge--officer {
+  color: var(--c-sonar);
+}
+.rank-badge--flag {
+  color: var(--c-warning);
+}
+.menu__rank {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  text-align: left;
+}
+.menu__rank-badge,
+.results__badge {
+  width: var(--space-7);
+  height: var(--space-7);
+}
+.log__sides {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.log__sides .log {
+  margin-top: var(--space-2);
+}
+.log__empty {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+}
+.log__coord {
+  display: inline-block;
+  min-width: 3.5em;
+}
+.stats {
+  max-width: calc(var(--space-7) * 15);
+}
+.stats__rank-body,
+.results__rank {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.results__rank p {
+  margin: 0;
+}
+.stats__badge {
+  width: calc(var(--space-7) * 1.5);
+  height: calc(var(--space-7) * 1.5);
+}
+.stats__rank-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: var(--tracking-title);
+}
+.stats__rank-body p {
+  margin: 0;
+}
+.xpbar {
+  width: min(280px, 60vw);
+  height: var(--space-2);
+  margin: var(--space-2) 0;
+  background: var(--c-deep);
+  box-shadow: 0 0 0 1px var(--c-steel);
+}
+.xpbar__fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--xp, 0) * 100%);
+  background: var(--c-sonar);
+}
+.stats__summary {
+  margin-top: var(--space-3);
+}
+.stats__table,
+.heatmap {
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.stats__table caption,
+.heatmap caption {
+  text-align: left;
+  padding-bottom: var(--space-3);
+}
+.stats__table th,
+.stats__table td {
+  padding: var(--space-1) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--c-steel);
+}
+.stats__table thead th {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+}
+.heatmap tr th {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--c-text-dim);
+  padding: var(--space-1);
+}
+.heatmap__cell {
+  width: 2.25em;
+  height: 2.25em;
+  text-align: center;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--c-steel);
+  background: color-mix(in srgb, var(--c-hit) calc(var(--heat, 0) * 85%), var(--c-water));
+}
+.challenges {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.challenge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.challenge.is-locked .challenge__title {
+  color: var(--c-text-dim);
+}
+.challenge-badge {
+  flex: none;
+  width: calc(var(--space-6) + var(--space-2));
+  height: calc(var(--space-6) + var(--space-2));
+}
+.challenge-badge__ribbon {
+  fill: none;
+  stroke: var(--c-signal);
+  stroke-width: 3;
+}
+.challenge-badge__disc {
+  fill: var(--c-deep);
+  stroke: var(--c-steel);
+  stroke-width: 1.5;
+}
+.challenge-badge.is-completed .challenge-badge__disc {
+  stroke: var(--c-warning);
+}
+.challenge-badge__mark {
+  fill: var(--c-warning);
+}
+.challenge-badge__lock {
+  stroke: var(--c-text-dim);
+  stroke-width: 2;
+}
+.challenge-badge.is-locked .challenge-badge__ribbon {
+  stroke: var(--c-steel);
+}
+.results__progress {
+  display: grid;
+  gap: var(--space-3);
+}
+.results__xp {
+  font-size: var(--fs-lg);
+  color: var(--c-sonar);
+}
+.results__rankup {
+  color: var(--c-warning);
+}
+.results__xp-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+}
+.results__xp-parts dd {
+  margin: 0;
+}

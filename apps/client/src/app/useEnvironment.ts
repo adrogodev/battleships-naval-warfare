@@ -1,8 +1,15 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import type { PlayerProgress } from "../progress/progress";
+import { progressStore } from "../progress/progressStore";
 import { type Settings, settingsStore } from "../settings/settingsStore";
 
 export function useSettings(): Settings {
   return useSyncExternalStore(settingsStore.subscribe, settingsStore.get);
+}
+
+/** Commander rank, statistics and challenges, kept in sync with the progress store. */
+export function useProgress(): PlayerProgress {
+  return useSyncExternalStore(progressStore.subscribe, progressStore.get);
 }
 
 function useMediaQuery(query: string): boolean {
