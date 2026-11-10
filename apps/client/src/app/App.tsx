@@ -6,7 +6,9 @@ import {
   type Placement,
 } from "@battleships/shared";
 import {
+  lazy,
   type ReactNode,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -15,10 +17,10 @@ import {
 } from "react";
 import { LocalAiGame } from "../adapters/localAiGame";
 import { SESSION_KEY, type SocketGame } from "../adapters/socketGame";
-import { AudioEngine, type SfxId } from "../audio";
+import type { SfxId } from "../audio";
+import { type GameAudio, LazyAudio } from "../audio/lazyAudio";
 import { Insignia } from "../components/Insignia";
 import { RankBadge } from "../components/RankBadge";
-import { FxLayer, OceanBackground } from "../fx";
 import { t } from "../i18n/es";
 import { MultiplayerFlow } from "../multiplayer/MultiplayerFlow";
 import { codeFromLocation } from "../multiplayer/roomCode";
@@ -49,7 +51,7 @@ export interface AppProps {
   /** AI "thinking" delay; overrides the aiDelay setting (reducible for tests). */
   readonly thinkDelayMs?: { min: number; max: number };
   readonly seed?: () => number;
-  readonly audio?: AudioEngine;
+  readonly audio?: GameAudio;
   /** Multiplayer adapter factory (a fake socket in tests). */
   readonly createMultiplayerGame?: () => SocketGame;
 }
@@ -75,7 +77,13 @@ function hasOnlineSession(): boolean {
   }
 }
 
-const defaultAudio = new AudioEngine();
+const defaultAudio = new LazyAudio();
+
+// Decoration loads after the first paint: the game is playable before the canvases arrive.
+const OceanBackground = lazy(() =>
+  import("../fx/ocean/OceanBackground").then((m) => ({ default: m.OceanBackground })),
+);
+const FxLayer = lazy(() => import("../fx/particles/FxLayer").then((m) => ({ default: m.FxLayer })));
 
 export function App({
   thinkDelayMs,
@@ -356,9 +364,13 @@ export function App({
 
   return (
     <>
-      <OceanBackground reducedMotion={reducedMotion} />
+      <Suspense fallback={null}>
+        <OceanBackground reducedMotion={reducedMotion} />
+      </Suspense>
       {content}
-      <FxLayer enabled={!reducedMotion} />
+      <Suspense fallback={null}>
+        <FxLayer enabled={!reducedMotion} />
+      </Suspense>
     </>
   );
 }

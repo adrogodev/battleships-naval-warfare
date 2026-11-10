@@ -15,7 +15,7 @@ import type { MusicIntensity, SfxId } from "../audio";
 import { currentStreak, musicIntensity, presentBoard } from "../battle/presentation";
 import { Board, type BoardShip, type CellView } from "../components/Board";
 import { Insignia } from "../components/Insignia";
-import { burstPreset, fxBus } from "../fx";
+import { burstPreset, fxBus } from "../fx/particles/bursts";
 import { t } from "../i18n/es";
 import {
   type CommanderMoment,
