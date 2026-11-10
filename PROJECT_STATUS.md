@@ -1,14 +1,14 @@
 # PROJECT_STATUS — Battleships: Naval Warfare
 
-**Fase actual: 4 (multijugador) — entregada, esperando aprobación.** Dos personas juegan en tiempo real contra un servidor autoritativo (Socket.IO): sala privada con código y enlace, sala de espera, despliegue privado, turnos con temporizador opcional, reacciones, reconexión con partida congelada, reclamo de victoria y revancha. El E2E con dos navegadores pasa en Chromium y WebKit.
+**Fase actual: 5 (calidad) — entregada, esperando aprobación.** Rango de Grumete a Almirante de Flota, estadísticas con mapa de calor, 10 desafíos con insignia, historial de 10 disparos por bando, tutorial interactivo, borrar datos, alto contraste, modo daltonismo, reglas por defecto, tablero escalable al 200 % y audio y efectos fuera del bundle inicial. El E2E cubre las cinco rutas de la sección 12 y los presupuestos medibles.
 
 ## Retomar en otra sesión
 
-1. Leer este archivo, `docs/PLAN.md`, `docs/PROTOCOL.md` y la bitácora de la fase en `odd/tasks/phase-4-multiplayer.md` (fases anteriores en `odd/tasks/`).
+1. Leer este archivo, `docs/PLAN.md`, `docs/PROTOCOL.md` y la bitácora de la fase en `odd/tasks/phase-5-quality.md` (fases anteriores en `odd/tasks/`).
 2. `pnpm install`, `pnpm test`; para jugar online: `pnpm --filter @battleships/server start` y `pnpm dev`.
-3. Si la Fase 4 está aprobada, empezar la Fase 5 (accesibilidad, rendimiento, progresión, tutorial) según `docs/PLAN.md`.
+3. Si la Fase 5 está aprobada, empezar la Fase 6 (despliegue y README) según `docs/PLAN.md`.
 
-Ramas apiladas: `feat/phase-1-core` → `feat/phase-2-identity` → `feat/phase-3-ai` → `feat/phase-4-multiplayer`. No hay push ni PR.
+Ramas apiladas: `feat/phase-1-core` → … → `feat/phase-4-multiplayer` → `feat/phase-5-quality`. No hay push ni PR.
 
 ## Comandos
 
@@ -64,38 +64,52 @@ Juego de batalla naval para navegador, completo y real: modo contra IA (tres dif
 | Hecho (F4) | Partida online: despliegue privado, turnos sincronizados, temporizador opcional (el turno pasa al expirar), reacciones rápidas, abandono con confirmación, revancha |
 | Hecho (F4) | Reconexión: el rival ve "Comandante X ha perdido la conexión" con cuenta atrás; al volver, el historial aparece sin repetir animaciones |
 | Hecho (F4) | Estados con salida: carga, sin conexión, sala inexistente, completa, abierta en otra pestaña, cerrada, servidor no disponible, acción inválida |
-| Pendiente (F5–F6) | Progresión y desafíos, tutorial, estadísticas, accesibilidad completa, rendimiento, despliegue |
+| Hecho (F5) | Rango de comandante por experiencia (victoria, precisión, hundimientos), visible en el menú; todo es cosmético o estadístico |
+| Hecho (F5) | Estadísticas: partidas, victorias por modo y dificultad, precisión media, mejor racha, partida más corta y mapa de calor |
+| Hecho (F5) | 10 desafíos con insignia (incluidos "Gana en Difícil con menos de 45 disparos" y "Hunde el portaaviones primero") |
+| Hecho (F5) | Historial: últimos 10 disparos de cada bando con coordenada y resultado |
+| Hecho (F5) | Tutorial "Cómo jugar" interactivo: colocar un barco, disparar y ver un hundimiento |
+| Hecho (F5) | Configuración: alto contraste, modo daltonismo (paleta Okabe–Ito y forma propia del hundido), regla de no contacto por defecto, borrar datos con confirmación |
+| Hecho (F5) | Tablero y cortes de diseño en `rem`/`em`: el texto al 200 % agranda las casillas y apila los tableros sin desborde |
+| Hecho (F5) | Motor de audio y lienzos de efectos cargados después (`LazyAudio`, `React.lazy`); el océano queda quieto hasta "Pulsa para comenzar" |
+| Pendiente (F6) | Despliegue y README |
 
 ## Pruebas y resultados
 
 `pnpm test` (exit 0):
 
 ```text
-Test Files  32 passed (32)
-     Tests  318 passed (318)
+Test Files  44 passed (44)
+     Tests  396 passed (396)
 ```
 
-Nuevas en la Fase 4: contrato del protocolo, integración del servidor con clientes Socket.IO reales (31: crear y unirse, sala llena o inexistente, disparo fuera de turno, fuera de fase, duplicado y mal formado, aislamiento de información, desconexión, reconexión, expiración, revancha) y pantallas multijugador del cliente.
-
-`pnpm test:e2e` (exit 0), dos contextos de navegador por prueba contra el servidor real y el build de producción:
+`pnpm test:e2e` (exit 0), contra el servidor real y el build de producción:
 
 ```text
-ok 1 [chromium] two players play a full online game and accept a rematch (1.2m)
-ok 2 [chromium] a reload in the middle of the battle rejoins the same seat without replaying history (17.1s)
-ok 3 [webkit]   two players play a full online game and accept a rematch (2.4m)
-ok 4 [webkit]   a reload in the middle of the battle rejoins the same seat without replaying history (47.5s)
-4 passed (5.1m)
+18 passed, 2 skipped (8.1m)
+chromium + webkit: partida online completa y revancha · recarga en mitad de la batalla ·
+  ida y vuelta de un disparo < 150 ms · partida completa contra la IA con estadísticas ·
+  solo teclado con foco visible · texto al 200 % · océano quieto hasta el primer toque ·
+  vista móvil (Pixel 7) con doble toque
+chromium: respuesta al clic < 100 ms · 60 fps en batalla con GPU real
 ```
 
-La prueba de recarga falla si se quita el arreglo (`ShotQueue.adopt`): "Expected: 6, Received: 1".
+Presupuestos de la sección 12, medidos en esta máquina:
+
+| Presupuesto | Resultado |
+|---|---|
+| 60 fps en batalla (escritorio) | 60,1 fps con GPU real (Intel Iris Xe); con render por software (SwiftShader) 17–25 fps, no representativo |
+| ≥ 50 fps en móvil de gama media | No medido en un dispositivo real |
+| Respuesta visual al clic < 100 ms | Chromium 13–70 ms hasta el siguiente fotograma; WebKit: ver desviaciones |
+| JS inicial < 300 kB gzip | 142,2 kB; audio (3,7 kB), océano (2,5 kB) y partículas (1,9 kB) en chunks aparte |
+| Partículas ≤ 150 con pool | Pool fijo de 150 (`ParticlePool`) |
+| Lighthouse ≥ 90 | Accesibilidad 100 (móvil y escritorio). Rendimiento con gzip: escritorio 99–100, móvil 81 / 88 / 94 en tres pasadas |
+| Ida y vuelta multijugador local < 150 ms | 1,6–24,2 ms (10 disparos) |
 
 Otras verificaciones:
 
 - `pnpm typecheck` (incluye `e2e/`) y `pnpm lint`: sin errores.
-- Fase 4 en Chrome real con dos pestañas: crear, unirse por enlace, partida completa, recarga en mitad de la batalla y revancha, sin errores en consola.
-- `pnpm build`: JS inicial de 111,55 kB gzip (presupuesto: 300 kB).
-- Chrome real con build de producción: partida completa automatizada hasta resultados, a 59 fps de media con 16 de 1.200 fotogramas por encima de 33 ms.
-- Móvil medido en un iframe: casillas de 32 px a 360 y 375 px, 35,8 px a 414 px y tablet a 800 px con los dos tableros. Sin desborde a 375 px.
+- Lighthouse 12.8.2 por `npx` (no es dependencia del repo), sin el script que inyecta el antivirus Kaspersky de esta máquina (`--blocked-url-patterns`) y con un servidor estático con gzip, como en un hosting real; `vite preview` no comprime.
 
 ## Errores conocidos y desviaciones
 
@@ -105,8 +119,13 @@ Otras verificaciones:
 - No verifiqué el audio a oído (solo pruebas unitarias con un AudioContext falso), la vibración en un dispositivo real, la confirmación de disparo en una pantalla táctil real ni la consola del navegador durante la partida automática.
 - A 360 px con una barra de desplazamiento de escritorio quedan 8 px de desborde; en teléfonos (barras superpuestas) entra.
 - La racha no tiene sonido propio: la música sube de intensidad y el indicador se anima.
-- Audio y efectos van en el bundle inicial en lugar de cargarse después (111,55 kB gzip, dentro del presupuesto).
-- `App.test.tsx` tarda unos 40 s porque juega una partida completa en jsdom.
+- Corregido en la Fase 5: audio y efectos ya no van en el bundle inicial.
+- `App.test.tsx` tarda unos 40 s porque juega una partida completa en jsdom. Con el disco lleno llegó a 230 s; no era una regresión.
+- Fase 5 · Lighthouse móvil: mediana 88 (81–94), por debajo de 90. El primer pintado depende de descargar el JS (2,2–2,3 s en 4G simulada) y el TBT varía de 129 a 472 ms según la carga de la máquina. Una mejora posible es una pantalla de arranque estática en `index.html`.
+- Fase 5 · Lighthouse mide la pantalla de arranque: el océano queda quieto hasta "Pulsa para comenzar". Con el océano animado desde la carga, el móvil bajaba a 64.
+- Fase 5 · WebKit de Playwright en Windows pinta el primer fotograma tras un disparo con 200–300 ms de retraso, aunque el DOM se actualiza en menos de 10 ms. Descarté el audio, los lienzos, los blur y clip-path, el layout y la velocidad de JavaScript (igual en ambos motores). No sé la causa. La prueba de 100 ms se salta en WebKit y no probé en Safari real.
+- Fase 5 · Las partículas mantienen sus colores en modo daltonismo: son decoración pasajera, no indican estado.
+- Fase 5 · No hay selector de idioma: solo existe el español y un selector de una opción sería decorativo. Los textos están centralizados en `i18n/`.
 - Corregido en la Fase 4: al recargar en mitad de la batalla se repetían animadas todas las jugadas (~18 s sin poder disparar).
 - No hay `apps/client/.env.example`: los permisos de este entorno bloquean escribir archivos `.env*`. `VITE_SERVER_URL` (por defecto, el host de la página en el puerto 3001) se documentará en el README de la Fase 6.
 - El E2E no cubre perder la red unos segundos, la sala abierta en dos pestañas ni la revancha con el rival ya fuera; esos casos los cubren las pruebas de integración del servidor y de pantallas.
@@ -130,5 +149,5 @@ Otras verificaciones:
 
 ## Próximos pasos
 
-1. Aprobación de la Fase 4.
-2. Fase 5: accesibilidad completa, rendimiento, progresión y desafíos, tutorial y estadísticas.
+1. Aprobación de las Fases 4 y 5.
+2. Fase 6: despliegue y README.
