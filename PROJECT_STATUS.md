@@ -23,6 +23,7 @@ Ramas apiladas: `feat/phase-1-core` → … → `feat/phase-4-multiplayer` → `
 | `pnpm lint` | Biome (lint + formato) |
 | `pnpm build` | Build de producción del cliente |
 | `pnpm simulate` | 1.000 partidas por dificultad; reescribe `docs/AI_METRICS.md` (admite `--games N`) |
+| `pnpm screenshots` | Juega en Chromium y regenera las capturas del README en `docs/screenshots/` (necesita el servidor y `vite preview` en el puerto 4173) |
 
 ## Objetivo
 

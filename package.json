@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r typecheck && tsc -p e2e/tsconfig.json",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "simulate": "tsx scripts/simulate-ai.ts"
+    "simulate": "tsx scripts/simulate-ai.ts",
+    "screenshots": "tsx scripts/screenshots.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.2",
