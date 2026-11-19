@@ -152,8 +152,9 @@ describe("App", () => {
     );
     settle();
     expect(progressStore.get().games).toBe(1);
-    // ~50 s alone; the full 100-shot game sits close to 60 s when the suite runs in parallel.
-  }, 120_000);
+    // ~50-80 s alone depending on the machine; with the whole suite running in parallel it
+    // went past 120 s on slower machines, so the budget leaves room for CI runners.
+  }, 240_000);
 
   it("counts an abandoned battle once, as a loss", async () => {
     await startBattle();
