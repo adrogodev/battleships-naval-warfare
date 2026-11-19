@@ -1,0 +1,21 @@
+# Local play with Docker: client on http://localhost:8080, server on http://localhost:3001.
+services:
+  server:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      CORS_ORIGINS: http://localhost:8080
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+      args:
+        VITE_SERVER_URL: http://localhost:3001
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+    restart: unless-stopped
